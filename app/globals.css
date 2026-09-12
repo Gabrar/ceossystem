@@ -1,7 +1,20 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
+  --background: #0a1929;
+  --foreground: #ededed;
+}
+
+.dark {
+  --background: #0a1929;
+  --foreground: #ededed;
+}
+
+:root:not(.dark),
+.light {
+  --background: #fafafa;
   --foreground: #171717;
 }
 
@@ -17,17 +30,11 @@
   --font-montserrat: var(--font-montserrat);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: #fafafa;
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @keyframes fade-in {
