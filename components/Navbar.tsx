@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { LogIn, UserPlus } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
     const [isVisible, setIsVisible] = useState(true);
@@ -51,6 +52,12 @@ export default function Navbar() {
             </Link>
             
             <ul className="flex justify-end items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                <li>
+                    <ThemeToggle />
+                </li>
+
+                <li aria-hidden="true" className="w-px h-3.5 sm:h-4 bg-blue-300/20 dark:bg-blue-400/20" />
+
                 <li>
                     <button className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-blue-100/90 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition-all duration-200 font-medium">
                         <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-300" />
