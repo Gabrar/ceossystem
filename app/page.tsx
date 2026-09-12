@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, Award, Users } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="relative bg-[#fafafa] dark:bg-[#0a1929] w-full h-[calc(100vh-73px)] flex items-center justify-center px-4 sm:px-6 lg:px-12 lg:pt-24 py-2 sm:py-4 overflow-hidden transition-colors fade-in">
+    <main className="relative bg-[#fafafa] dark:bg-[#0a1929] w-full h-[calc(100vh-73px)] flex items-center justify-center px-4 sm:px-6 lg:px-12 lg:pt-24 py-2 overflow-hidden transition-colors fade-in">
 
       {/* Luz ambiente com blur suave responsiva */}
       <div
@@ -15,7 +15,7 @@ export default function Home() {
       <div className="relative z-10 max-w-7xl w-full mx-auto flex flex-col-reverse lg:flex-row items-center justify-between gap-6 sm:gap-8 lg:gap-12 -translate-y-4 sm:-translate-y-6 lg:-translate-y-8">
 
         {/* Coluna de Texto e Ações */}
-        <div className="font-montserrat flex-1 w-full max-w-2xl flex flex-col items-center text-center lg:items-start lg:text-left space-y-4 lg:space-y-5">
+        <div className="font-montserrat flex-1 w-full max-w-2xl flex flex-col items-center text-center lg:items-start lg:text-left space-y-4 lg:space-y-5 lg:mx-10">
 
           {/* Título com tipografia responsiva e Montserrat */}
           <h1 className="drop font-montserrat text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
@@ -23,7 +23,7 @@ export default function Home() {
           </h1>
 
           {/* Parágrafo estilizado e balanceado */}
-          <p className="drop text-xs sm:text-sm md:text-lg text-slate-600 dark:text-slate-300/90 leading-relaxed max-w-xl mx-auto lg:mx-0">
+          <p className="drop text-xs sm:text-sm md:text-lg text-slate-600 dark:text-slate-300/90 leading-relaxed max-w-xl mx-auto lg:mx-0 ">
             Nós da Céos System somos um grupo de professores que há muito tempo estão envolvidos na estruturação e realização de congressos e eventos científicos, por isso preparamos uma plataforma para que seu evento seja o melhor, indo desde a formatação do evento até a publicação dos anais.
           </p>
 
