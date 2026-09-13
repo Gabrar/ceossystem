@@ -24,7 +24,7 @@ export default function Home() {
 
           {/* Parágrafo estilizado e balanceado */}
           <p className="drop text-xs sm:text-sm md:text-lg text-slate-600 dark:text-slate-300/90 leading-relaxed max-w-xl mx-auto lg:mx-0 ">
-            Nós da Céos System somos um grupo de professores que há muito tempo estão envolvidos na estruturação e realização de congressos e eventos científicos, por isso preparamos uma plataforma para que seu evento seja o melhor, indo desde a formatação do evento até a publicação dos anais.
+            Formada por professores com ampla experiência na realização de congressos científicos, a Céos System entende os desafios do seu evento. Por isso, criamos uma plataforma integrada que acompanha você desde a formatação até a publicação dos anais, assegurando o mais alto padrão de qualidade.
           </p>
 
           {/* Botões de Ação */}
