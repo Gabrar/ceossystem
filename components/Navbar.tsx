@@ -59,19 +59,25 @@ export default function Navbar() {
                 <li aria-hidden="true" className="w-px h-3.5 sm:h-4 bg-blue-300/20 dark:bg-blue-400/20" />
 
                 <li>
-                    <button className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-blue-100/90 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition-all duration-200 font-medium">
+                    <Link
+                        href="/login"
+                        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-blue-100/90 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition-all duration-200 font-medium"
+                    >
                         <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-300" />
                         <span>Login</span>
-                    </button>
+                    </Link>
                 </li>
 
                 <li aria-hidden="true" className="w-px h-3.5 sm:h-4 bg-blue-300/20 dark:bg-blue-400/20" />
 
                 <li>
-                    <button className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg shadow-sm hover:shadow-md hover:shadow-blue-500/25 cursor-pointer transition-all duration-200 font-medium">
+                    <Link
+                        href="/registro"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg shadow-sm hover:shadow-md hover:shadow-blue-500/25 cursor-pointer transition-all duration-200 font-medium"
+                    >
                         <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span>Registro</span>
-                    </button>
+                    </Link>
                 </li>
             </ul>
         </nav>
