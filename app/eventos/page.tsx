@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EventCard, { Evento } from "@/components/EventCard";
 import Modal from "@/components/Modal";
-import { Search, X, SlidersHorizontal } from "lucide-react";
+import { Search, X, SlidersHorizontal, Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import Link from "next/link";
 
 export default function EventosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { userData } = useAuth();
 
   const handleOpenModal = (evento: Evento) => {
     setSelectedEvento(evento);
@@ -20,119 +25,58 @@ export default function EventosPage() {
     setIsModalOpen(false);
   };
 
-  const eventos: Evento[] = [
-    {
-      id: 1,
-      titulo: "II Congresso Nordestino de Anatomia Multidisciplinar Aplicada e I Congresso Nordestino de Anatomia Veterinária e Comparada",
-      subtitulo: "Avanços e práticas integradas em morfologia humana e comparada",
-      descricaoCompleta:
-        "O II Congresso Nordestino de Anatomia Multidisciplinar Aplicada e I Congresso Nordestino de Anatomia Veterinária e Comparada tem como objetivo congregar pesquisadores, docentes e discentes das áreas de saúde e biologia em um ambiente de debate científico de alto nível. A programação conta com conferências magnas, mesas-redondas com temas multidisciplinares, apresentações de pôsteres e publicação de resumos em anais com ISBN.",
-      categoria: "Congresso",
-      status: "Inscrições Abertas",
-      local: "UFRN - Auditório da Reitoria",
-      cidadeEstado: "NATAL - RN | 2026",
-      data: "30/09 a 02/10/2026",
-      palestrantes: [
-        {
-          nome: "Profa. Dra. Eliane Marques Duarte",
-          eixo: "Eixo Ensino",
-          instituicao: "UNIVERSIDADE FEDERAL DA PARAÍBA (UFPB)",
-          foto: "/assets/palestrantes/1/Profa. Dra. Eliane Marques Duarte.jpeg",
-        },
-        {
-          nome: "Profa. Dra. Anna Ferla Monteiro",
-          eixo: "Eixo extensão",
-          instituicao: "UNIVERSIDADE FEDERAL DA PARAÍBA (UFPB)",
-          foto: "/assets/palestrantes/1/Profa. Dra. Anna Ferla Monteiro.jpeg",
-        },
-        {
-          nome: "Prof. Dr. Frederico Sousa",
-          eixo: "Eixo pesquisa",
-          instituicao: "UNIVERSIDADE FEDERAL DA PARAÍBA (UFPB)",
-          foto: "/assets/palestrantes/1/Prof. Dr. Frederico Sousa.jpg",
-        },
-      ],
-      horario: "08h às 12h e 13h às 18h",
-      site: "#",
-      img: "/assets/logos/teste-anatomia.png",
-      destaque: true,
-      cargaHoraria: "40 Horas Complementares",
-      publicoAlvo: "Estudantes, pesquisadores e docentes de Medicina, Veterinária, Biomedicina e Biologia",
-      organizacao: "Comissão Científica UFRN & Plataforma Céos System",
-    },
-    {
-      id: 2,
-      titulo: "NEUROVET - III Simpósio de Neurologia Veterinária",
-      subtitulo: "O III NEUROVET – Simpósio de Neurologia Veterinária da UFBA chega para reunir estudantes e profissionais renomados.",
-      descricaoCompleta:
-        "O NEUROVET é um evento de referência nacional dedicado à neurologia clínica e cirúrgica de pequenos e grandes animais. Durante os três dias, serão debatidas novas abordagens diagnósticas por imagem (ressonância e tomografia), tratamento cirúrgico de afecções da coluna e crânio, emergências neurológicas e reabilitação motora.",
-      categoria: "Simpósio",
-      status: "Em Breve",
-      local: "UFBA - Pavilhão de Aulas Integradas",
-      cidadeEstado: "SALVADOR - BA | 2026",
-      data: "14/11 a 16/11/2026",
-      palestrantes: [
-        // Adicione aqui os palestrantes do evento 2:
-        // {
-        //   nome: "Nome do Palestrante",
-        //   eixo: "Eixo Temático",
-        //   instituicao: "Instituição ou Universidade",
-        //   foto: "/assets/palestrantes/2/foto.jpg",
-        // },
-      ],
-      horario: "09h às 17h",
-      site: "#",
-      img: "/assets/logos/teste-neuro.jpg",
-      destaque: false,
-      cargaHoraria: "30 Horas Complementares",
-      publicoAlvo: "Médicos Veterinários, pós-graduandos e estudantes de Medicina Veterinária",
-      organizacao: "UFBA & Céos System Congressos",
-    },
-    {
-      id: 3,
-      titulo: "Curso de Tratamento Somatovisceral e Anatomia em Cádaver",
-      subtitulo: "Aulas teóricas e práticas sobre anatomia da região epigástrica, cadeias fasciais e raciocínio osteopático avançado.",
-      descricaoCompleta:
-        "Uma imersão teórico-prática intensiva de anatomia palpatória e dissecação cadavérica guiada para profissionais da saúde. Os participantes terão a oportunidade de correlationar aspectos neurofuncionais e fasciais das vísceras abdominais com sintomas musculoesqueléticos e abordagens manuais de alta precisão.",
-      categoria: "Workshop",
-      status: "Inscrições Abertas",
-      local: "Instituto Paulo Veiga - Laboratório Morfológico",
-      cidadeEstado: "RECIFE - PE | 2026",
-      data: "05/12 a 07/12/2026",
-      palestrantes: [
-        // Adicione aqui os palestrantes do evento 3
-      ],
-      horario: "08h às 18h",
-      site: "#",
-      img: "/assets/logos/teste-curso.jpeg",
-      destaque: false,
-      cargaHoraria: "24 Horas Práticas",
-      publicoAlvo: "Fisioterapeutas, Osteopatas, Quiropraxistas e Médicos",
-      organizacao: "Instituto Paulo Veiga de Formação Continuada",
-    },
-    {
-      id: 4,
-      titulo: "II Encontro de Morfologia da UFPB",
-      subtitulo: "O Encontro de Morfologia da UFPB (ENCOMORF) tem como finalidade constituir-se como um evento anual de integração científica.",
-      descricaoCompleta:
-        "O ENCOMORF visa integrar a comunidade acadêmica e incentivar a iniciação científica em anatomia, histologia e embriologia. Conta com apresentações orais de trabalhos acadêmicos premiados, minicursos de técnicas histológicas e workshops sobre microscopia eletrônica e avanços morfológicos contemporâneos.",
-      categoria: "Seminário",
-      status: "Inscrições Abertas",
-      local: "UFPB - Centro de Ciências da Saúde (CCS)",
-      cidadeEstado: "JOÃO PESSOA - PB | 2026",
-      data: "05/12 a 07/12/2026",
-      palestrantes: [
-        // Adicione aqui os palestrantes do evento 4
-      ],
-      horario: "08h às 18h",
-      site: "#",
-      img: "/assets/logos/teste-encontro.png",
-      destaque: false,
-      cargaHoraria: "30 Horas de Atividades",
-      publicoAlvo: "Docentes, pós-graduandos e acadêmicos da área de Ciências da Saúde",
-      organizacao: "Departamento de Morfologia UFPB",
-    },
-  ];
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [loadingEventos, setLoadingEventos] = useState(true);
+
+  useEffect(() => {
+    const fetchEventos = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "events"));
+        const eventosData: Evento[] = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+
+          // Formatação inteligente para aceitar os dois esquemas de banco (antigo e novo)
+          const formatarData = (d: string) => d ? d.split('-').reverse().join('/') : "";
+          const dInicio = data.dateInicio ? formatarData(data.dateInicio) : "";
+          const dFim = data.dateFim ? formatarData(data.dateFim) : "";
+          const dataFinal = dInicio ? (dFim ? `${dInicio} a ${dFim}` : dInicio) : (data.date || "");
+
+          const horaFinal = data.horaInicio ? (data.horaFim ? `${data.horaInicio} às ${data.horaFim}` : data.horaInicio) : (data.hour || "");
+          
+          const localNome = data.local?.nomeLocal || data.localization || "";
+          const localCidade = data.local?.cidade || data["city-state"] || "";
+
+          return {
+            id: doc.id,
+            titulo: data.title || "",
+            subtitulo: data.subtitle || "",
+            descricaoCompleta: data.description || "",
+            categoria: data.category || "Geral",
+            status: data.status || "Em Breve",
+            local: localNome,
+            cidadeEstado: localCidade,
+            data: dataFinal,
+            palestrantes: data.palestrantes || [],
+            minicursos: data.minicursos || [],
+            horario: horaFinal,
+            site: data.website || "#",
+            img: data.img || "/assets/logos/teste-anatomia.png",
+            destaque: data.emphasis || false,
+            cargaHoraria: data.workload || "",
+            publicoAlvo: data.target || "",
+            organizacao: data.org || ""
+          };
+        });
+        setEventos(eventosData);
+      } catch (error) {
+        console.error("Erro ao buscar eventos:", error);
+      } finally {
+        setLoadingEventos(false);
+      }
+    };
+
+    fetchEventos();
+  }, []);
 
   const categorias = ["Todos", "Congresso", "Simpósio", "Workshop", "Seminário"];
 
@@ -166,26 +110,40 @@ export default function EventosPage() {
             Descubra congressos, simpósios e jornadas científicas estruturadas com a excelência Céos System.
           </p>
 
-          {/* Barra de Pesquisa Moderna */}
+          {/* Barra de Pesquisa Moderna e Ações */}
           <div className="w-full max-w-xl pt-2">
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 w-5 h-5 text-slate-400 dark:text-slate-500 pointer-events-none" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por evento, cidade ou local..."
-                className="w-full pl-11 pr-10 py-3 rounded-2xl bg-white dark:bg-[#0c1e33]/80 border border-slate-200 dark:border-blue-900/50 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm shadow-sm hover:border-blue-400 dark:hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 dark:focus:border-blue-500 transition-all duration-200"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  aria-label="Limpar busca"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative flex-1 w-full flex items-center">
+                <Search className="absolute left-4 w-5 h-5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por evento, cidade ou local..."
+                  className="w-full pl-11 pr-10 py-3 rounded-2xl bg-white dark:bg-[#0c1e33]/80 border border-slate-200 dark:border-blue-900/50 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm shadow-sm hover:border-blue-400 dark:hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 dark:focus:border-blue-500 transition-all duration-200"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {(userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor") && (
+                <Link href="/eventos/createEvent">
+                  <button
+                    type="button"
+                    className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Criar evento
+                  </button>
+                </Link>
               )}
             </div>
 
@@ -211,7 +169,12 @@ export default function EventosPage() {
 
         {/* Grid de Eventos */}
         <section aria-label="Lista de Eventos">
-          {eventosFiltrados.length > 0 ? (
+          {loadingEventos ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="w-8 h-8 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">Carregando eventos...</p>
+            </div>
+          ) : eventosFiltrados.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
               {eventosFiltrados.map((evento) => (
                 <EventCard

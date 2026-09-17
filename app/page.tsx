@@ -1,33 +1,27 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BookOpen, Award, Users } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="relative bg-[#fafafa] dark:bg-[#0a1929] w-full h-[calc(100vh-73px)] flex items-center justify-center px-4 sm:px-6 lg:px-12 lg:pt-24 py-2 overflow-hidden transition-colors fade-in">
 
-      {/* Luz ambiente com blur suave responsiva */}
       <div
         aria-hidden="true"
         className="absolute top-1/3 lg:top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 sm:w-[450px] lg:w-[550px] h-72 sm:h-[450px] lg:h-[550px] bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-[100px] sm:blur-[140px] pointer-events-none"
       />
 
-      {/* Container principal puxado mais para cima para não gerar scroll */}
       <div className="relative z-10 max-w-7xl w-full mx-auto flex flex-col-reverse lg:flex-row items-center justify-between gap-6 sm:gap-8 lg:gap-12 -translate-y-4 sm:-translate-y-6 lg:-translate-y-8">
 
-        {/* Coluna de Texto e Ações */}
         <div className="font-montserrat flex-1 w-full max-w-2xl flex flex-col items-center text-center lg:items-start lg:text-left space-y-4 lg:space-y-5 lg:mx-10">
 
-          {/* Título com tipografia responsiva e Montserrat */}
           <h1 className="drop font-montserrat text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
             Seja bem-vindo<span className="text-blue-600 dark:text-blue-400">!</span>
           </h1>
-
-          {/* Parágrafo estilizado e balanceado */}
           <p className="drop text-xs sm:text-sm md:text-lg text-slate-600 dark:text-slate-300/90 leading-relaxed max-w-xl mx-auto lg:mx-0 ">
             Formada por professores com ampla experiência na realização de congressos científicos, a Céos System entende os desafios do seu evento. Por isso, criamos uma plataforma integrada que acompanha você desde a formatação até a publicação dos anais, assegurando o mais alto padrão de qualidade.
           </p>
 
-          {/* Botões de Ação */}
           <div className="drop pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 w-full sm:w-auto">
             <Link
               href="/eventos"
@@ -66,9 +60,12 @@ export default function Home() {
         {/* Coluna da Imagem dos Palestrantes com Controle de Altura */}
         <div className="flex-1 w-full flex justify-center items-center">
           <div className="relative w-full max-w-[240px] sm:max-w-[320px] md:max-w-[380px] lg:max-w-[480px]">
-            <img
+            <Image
               src="/assets/palestrantes-removebg-preview.png"
               alt="Palestrantes e Eventos Científicos"
+              width={480}
+              height={440}
+              priority
               className="w-full h-auto max-h-[280px] sm:max-h-[350px] lg:max-h-[440px] lg:pl-25 object-contain drop pointer-events-none drop-shadow-2xl"
             />
           </div>

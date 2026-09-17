@@ -8,10 +8,12 @@ export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Sincroniza o estado inicial baseado na classe do HTML ou localStorage
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
-    setMounted(true);
+    // Sincroniza o estado inicial
+    setTimeout(() => {
+      const isDark = document.documentElement.classList.contains("dark");
+      setTheme(isDark ? "dark" : "light");
+      setMounted(true);
+    }, 0);
 
     // Escuta mudanças de storage entre abas
     const handleStorage = (e: StorageEvent) => {

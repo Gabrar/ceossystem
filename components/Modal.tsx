@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import {
   X,
   Calendar,
@@ -89,10 +90,11 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
           
           {/* Imagem Proporcional e Equilibrada */}
           <div className="relative w-full sm:w-56 md:w-64 lg:w-72 aspect-[16/10] sm:aspect-[4/3] rounded-2xl overflow-hidden shrink-0 shadow-md bg-slate-200 dark:bg-slate-800">
-            <img
+            <Image
               src={evento.img}
               alt={evento.titulo}
-              className="w-full h-full object-cover object-center"
+              fill
+              className="object-cover object-center"
             />
             {/* Status Badge sobre a imagem */}
             <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-600 text-white backdrop-blur-md shadow-sm">
@@ -142,7 +144,9 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
 
               <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                 <Award className="w-4 h-4 text-blue-500 shrink-0" />
-                <span className="font-medium truncate">{evento.cargaHoraria || "Certificado Incluso"}</span>
+                <span className="font-medium truncate">
+                  {evento.cargaHoraria ? `${evento.cargaHoraria} Horas Complementares` : "Certificado Incluso"}
+                </span>
               </div>
             </div>
           </div>
@@ -163,10 +167,10 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
                 {evento.palestrantes.map((palestrante, idx) => {
                   const isObj = typeof palestrante === "object" && palestrante !== null;
                   const nome = isObj ? palestrante.nome : palestrante;
-                  const eixo = isObj ? palestrante.eixo : undefined;
+                  const especialidade = isObj ? palestrante.especialidade : undefined;
                   const instituicao = isObj ? (palestrante.instituicao || palestrante.cargo) : undefined;
-                  const foto = isObj && palestrante.foto
-                    ? palestrante.foto
+                  const foto = isObj && (palestrante.fotoUrl || palestrante.foto)
+                    ? (palestrante.fotoUrl || palestrante.foto)
                     : evento.palestrantes_img && evento.palestrantes_img[idx]
                     ? evento.palestrantes_img[idx]
                     : undefined;
@@ -177,11 +181,14 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
                       className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white dark:bg-[#071321]/80 border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:shadow-md transition-shadow"
                     >
                       {foto ? (
-                        <img
-                          src={foto}
-                          alt={nome}
-                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover shrink-0 border border-slate-100 dark:border-slate-800 shadow-xs"
-                        />
+                        <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full border border-slate-100 dark:border-slate-800 shadow-xs overflow-hidden">
+                          <Image
+                            src={foto}
+                            alt={nome}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-base shrink-0 border border-blue-200/60 dark:border-blue-800/50">
                           {nome ? nome.charAt(0).toUpperCase() : "P"}
@@ -192,9 +199,9 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
                         <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug">
                           {nome}
                         </h4>
-                        {eixo && (
+                        {especialidade && (
                           <p className="text-blue-600 dark:text-blue-400 text-xs font-medium leading-tight mt-0.5">
-                            {eixo}
+                            {especialidade}
                           </p>
                         )}
                         {instituicao && (
@@ -206,6 +213,30 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Minicursos */}
+          {evento.minicursos && evento.minicursos.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <h3 className="font-montserrat text-lg sm:text-xl font-bold text-[#0c1e33] dark:text-blue-400">
+                Minicursos Associados
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {evento.minicursos.map((minicurso, idx) => (
+                  <div key={idx} className="flex gap-4 p-3 rounded-2xl bg-white dark:bg-[#071321]/80 border border-slate-200/90 dark:border-blue-900/40 hover:shadow-md transition-shadow">
+                    {minicurso.imagemUrl && (
+                      <div className="relative w-20 h-20 shrink-0 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-xs">
+                        <Image src={minicurso.imagemUrl} alt={minicurso.nome} fill className="object-cover" />
+                      </div>
+                    )}
+                    <div className="flex flex-col justify-center min-w-0">
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-snug truncate">{minicurso.nome}</h4>
+                      <p className="text-blue-600 dark:text-blue-400 text-xs font-semibold mt-0.5">{minicurso.tipo}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

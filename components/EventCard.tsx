@@ -1,15 +1,34 @@
-import { Calendar, Clock, MapPin, ArrowRight, Share2, Tag } from "lucide-react";
+import Image from "next/image";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  ArrowRight,
+  Share2,
+  Tag,
+} from "lucide-react";
 
 export interface Palestrante {
   nome: string;
   eixo?: string;
   instituicao?: string;
   foto?: string;
+  fotoUrl?: string;
   cargo?: string;
+  especialidade?: string;
+  bio?: string;
+}
+
+export interface Minicurso {
+  nome: string;
+  tipo: string;
+  imagemUrl?: string;
+  local?: string;
+  descricao?: string;
 }
 
 export interface Evento {
-  id: number;
+  id: string | number;
   titulo: string;
   subtitulo?: string;
   descricaoCompleta?: string;
@@ -29,6 +48,7 @@ export interface Evento {
   valorOuInscricao?: string;
   palestrantes?: (string | Palestrante)[];
   palestrantes_img?: string[];
+  minicursos?: Minicurso[];
 }
 
 interface EventCardProps {
@@ -65,10 +85,11 @@ export default function EventCard({ evento, onVerDetalhes }: EventCardProps) {
     >
       {/* Container da Imagem com Badges Flutuantes */}
       <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-        <img
+        <Image
           src={evento.img}
           alt={evento.titulo}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+          fill
+          className="object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
         />
 
         {/* Gradiente escuro para legibilidade */}

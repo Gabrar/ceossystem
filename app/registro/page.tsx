@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import {
   User,
   Mail,
@@ -109,6 +113,7 @@ function validarCPF(cpf: string): boolean {
 }
 
 export default function RegistroPage() {
+  const router = useRouter();
   // Campos do formulário
   const [nome, setNome] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("");
@@ -178,7 +183,7 @@ export default function RegistroPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -217,10 +222,41 @@ export default function RegistroPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, { displayName: nome });
+        
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          nome,
+          tipoUsuario,
+          email,
+          pais,
+          estado,
+          tipoDocumento,
+          documento,
+          ddi,
+          telefone,
+          createdAt: new Date().toISOString()
+        });
+      }
+
       setIsSuccess(true);
-    }, 1200);
+      setTimeout(() => {
+        router.push("/");
+      }, 1500);
+    } catch (error: unknown) {
+      console.error(error);
+      let errorMsg = "Erro ao criar conta. Tente novamente.";
+      const err = error as { code?: string };
+      if (err.code === "auth/email-already-in-use") {
+        errorMsg = "Este e-mail já está em uso.";
+      }
+      setErrorMessage(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -329,17 +365,20 @@ export default function RegistroPage() {
                       <option value="" disabled className="bg-white dark:bg-[#0c1e33] text-slate-500">
                         Selecione seu perfil...
                       </option>
+                      <option value="palestrante" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
+                        Palestrante
+                      </option>
+                      <option value="congressista" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
+                        Congressista
+                      </option>
+                      <option value="promotor" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
+                        Promotor
+                      </option>
                       <option value="aluno" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
-                        Aluno / Estudante
+                        Aluno
                       </option>
-                      <option value="professor" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
-                        Professor / Docente
-                      </option>
-                      <option value="tecnico" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
-                        Técnico / Administrativo
-                      </option>
-                      <option value="outro" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
-                        Outro
+                      <option value="aluno_pos_graduacao" className="bg-white dark:bg-[#0c1e33] text-slate-900 dark:text-slate-100">
+                        Aluno de Pós Graduação
                       </option>
                     </select>
                     <ChevronDown className="absolute right-3.5 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />

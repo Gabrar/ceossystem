@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Mail,
   Lock,
@@ -14,6 +17,7 @@ import {
 } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,15 +25,25 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
     setIsLoading(true);
 
-    // Simulação visual de envio
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       setLoginSuccess(true);
-    }, 1200);
+      setTimeout(() => {
+        router.push("/");
+      }, 1500);
+    } catch (error: unknown) {
+      console.error(error);
+      setErrorMessage("Credenciais inválidas. Verifique seu e-mail e senha.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,6 +91,12 @@ export default function LoginPage() {
           ) : (
             /* Formulário */
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              {/* Alerta de Erro */}
+              {errorMessage && (
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 flex items-center gap-2.5 text-rose-700 dark:text-rose-300 text-xs sm:text-sm fade-in">
+                  <span>{errorMessage}</span>
+                </div>
+              )}
               {/* Campo E-mail */}
               <div className="space-y-1.5">
                 <label
