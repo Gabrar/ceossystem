@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -27,6 +27,15 @@ export default function LoginPage() {
 
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    if (loginSuccess) {
+      const timer = setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [loginSuccess]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -35,9 +44,6 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setLoginSuccess(true);
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
     } catch (error: unknown) {
       console.error(error);
       setErrorMessage("Credenciais inválidas. Verifique seu e-mail e senha.");
@@ -87,6 +93,9 @@ export default function LoginPage() {
               <p className="text-xs text-emerald-700 dark:text-emerald-400">
                 Redirecionando para a área do congressista...
               </p>
+              <a href="/" className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 underline">
+                Clique aqui se não for redirecionado
+              </a>
             </div>
           ) : (
             /* Formulário */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -136,6 +136,15 @@ export default function RegistroPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess]);
+
   // Validação de senha conforme requisitos
   const hasMinLength = password.length >= 8;
   const hasUpperCase = /[A-Z]/.test(password);
@@ -243,9 +252,6 @@ export default function RegistroPage() {
       }
 
       setIsSuccess(true);
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
     } catch (error: unknown) {
       console.error(error);
       let errorMsg = "Erro ao criar conta. Tente novamente.";
@@ -295,21 +301,15 @@ export default function RegistroPage() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 mx-auto">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h2 className="font-montserrat font-bold text-xl sm:text-2xl text-emerald-800 dark:text-emerald-300">
-                Cadastro realizado com sucesso!
-              </h2>
-              <p className="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 max-w-md mx-auto">
-                Sua conta na Céos System foi criada com segurança. Você já pode fazer login para acessar seus eventos científicos.
+              <h3 className="font-montserrat font-bold text-base text-emerald-800 dark:text-emerald-300">
+                Conta criada com sucesso!
+              </h3>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                Aguarde um instante enquanto preparamos seu ambiente...
               </p>
-              <div className="pt-2">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-                >
-                  <span>Ir para o Login</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
+              <a href="/" className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 underline">
+                Clique aqui se não for redirecionado
+              </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
