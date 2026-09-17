@@ -36,7 +36,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       setLoginSuccess(true);
       setTimeout(() => {
-        router.push("/");
+        window.location.href = "/";
       }, 1500);
     } catch (error: unknown) {
       console.error(error);

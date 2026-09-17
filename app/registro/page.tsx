@@ -244,7 +244,7 @@ export default function RegistroPage() {
 
       setIsSuccess(true);
       setTimeout(() => {
-        router.push("/");
+        window.location.href = "/";
       }, 1500);
     } catch (error: unknown) {
       console.error(error);
