@@ -19,6 +19,7 @@ const montserrat = Montserrat({
   subsets: ["latin"],
 });
 
+
 export const metadata: Metadata = {
   title: "Céos System | Plataforma de Congressos e Eventos Científicos",
   description: "Estruturação e realização de congressos e eventos científicos, da formatação até a publicação dos anais.",

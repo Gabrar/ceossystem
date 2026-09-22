@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   HelpCircle,
   ChevronDown,
@@ -10,8 +11,11 @@ import {
   ExternalLink,
   BookOpen,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Send
 } from "lucide-react";
+
+
 
 export default function AjudaPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -82,8 +86,8 @@ export default function AjudaPage() {
           </div>
         </a>
 
-        <a
-          href="mailto:suporte@ceossystem.com"
+        <Link
+          href="/contato"
           className="p-5 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:border-blue-500 transition-all flex items-start gap-4 group cursor-pointer"
         >
           <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -91,17 +95,17 @@ export default function AjudaPage() {
           </div>
           <div className="min-w-0">
             <h3 className="font-montserrat font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
-              E-mail de Suporte
+              Fale Conosco
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              suporte@ceossystem.com
+              Envie uma mensagem direta para nossa equipe
             </p>
             <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-2 inline-flex items-center gap-1">
-              Enviar mensagem
-              <ExternalLink className="w-3 h-3" />
+              Abrir formulário de contato
+              <Send className="w-3 h-3" />
             </span>
           </div>
-        </a>
+        </Link>
 
         <div className="p-5 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs flex items-start gap-4">
           <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
