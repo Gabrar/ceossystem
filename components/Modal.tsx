@@ -15,8 +15,10 @@ import {
   Share2,
   CheckCircle2,
   Ticket,
+  AlertCircle,
 } from "lucide-react";
 import { Evento } from "@/components/EventCard";
+import { getStatusBadgeConfig, getEventRegistrationStatus } from "@/lib/eventStatus";
 
 interface ModalProps {
   isOpen: boolean;
@@ -97,10 +99,16 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
               className="object-cover object-center"
             />
             {/* Status Badge sobre a imagem */}
-            <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-600 text-white backdrop-blur-md shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{evento.status}</span>
-            </div>
+            {(() => {
+              const status = getEventRegistrationStatus(evento);
+              const badge = getStatusBadgeConfig(status);
+              return (
+                <div className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold backdrop-blur-md shadow-sm border ${badge.badgeClass}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${badge.dotClass}`} />
+                  <span>{status}</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Dados Principais do Evento ao lado da imagem */}
@@ -332,16 +340,47 @@ export default function Modal({ isOpen, onClose, evento }: ModalProps) {
             </button>
           </div>
 
-          <a
-            href={evento.site || "#"}
-            target={evento.site && evento.site !== "#" ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 cursor-pointer"
-          >
-            <Ticket className="w-4 h-4" />
-            <span>Garantir Inscrição</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-          </a>
+          {(() => {
+            const status = getEventRegistrationStatus(evento);
+            if (status === "Inscrições Abertas") {
+              return (
+                <a
+                  href={evento.site || "#"}
+                  target={evento.site && evento.site !== "#" ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-md hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 cursor-pointer"
+                >
+                  <Ticket className="w-4 h-4" />
+                  <span>Garantir Inscrição</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+              );
+            }
+            if (status === "Em Breve") {
+              return (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700/60 cursor-not-allowed select-none"
+                >
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  <span>Inscrições em Breve</span>
+                </button>
+              );
+            }
+            return (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700/60 cursor-not-allowed select-none"
+              >
+                <AlertCircle className="w-4 h-4 text-slate-400" />
+                <span>Inscrições Encerradas</span>
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

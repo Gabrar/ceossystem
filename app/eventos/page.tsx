@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import { getEventRegistrationStatus } from "@/lib/eventStatus";
 
 export default function EventosPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,13 +35,27 @@ export default function EventosPage() {
           const localNome = data.local?.nomeLocal || data.localization || "";
           const localCidade = data.local?.cidade || data["city-state"] || "";
 
+          const statusCalculado = getEventRegistrationStatus({
+            dataInscricaoInicio: data.dataInscricaoInicio,
+            dataInscricaoFim: data.dataInscricaoFim,
+            horaInscricaoInicio: data.horaInscricaoInicio,
+            horaInscricaoFim: data.horaInscricaoFim,
+            dateInicio: data.dateInicio,
+            dateFim: data.dateFim,
+            status: data.status,
+          });
+
           return {
             id: doc.id,
             titulo: data.title || "",
             subtitulo: data.subtitle || "",
             descricaoCompleta: data.description || "",
             categoria: data.category || "Geral",
-            status: data.status || "Em Breve",
+            status: statusCalculado,
+            dataInscricaoInicio: data.dataInscricaoInicio || "",
+            dataInscricaoFim: data.dataInscricaoFim || "",
+            horaInscricaoInicio: data.horaInscricaoInicio || "",
+            horaInscricaoFim: data.horaInscricaoFim || "",
             local: localNome,
             cidadeEstado: localCidade,
             data: dataFinal,

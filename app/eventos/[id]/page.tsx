@@ -7,6 +7,7 @@ import { doc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
 import {
   Calendar,
   Clock,
@@ -104,6 +105,10 @@ interface EventoDetalhes {
   descricaoCompleta?: string;
   categoria: string;
   status: string;
+  dataInscricaoInicio?: string;
+  dataInscricaoFim?: string;
+  horaInscricaoInicio?: string;
+  horaInscricaoFim?: string;
   modalidade?: string;
   capacidade?: string;
   localNome: string;
@@ -219,13 +224,27 @@ export default function EventoDetailsPage({
           ingressos: m.ingressos || [],
         }));
 
+        const statusCalculado = getEventRegistrationStatus({
+          dataInscricaoInicio: data.dataInscricaoInicio,
+          dataInscricaoFim: data.dataInscricaoFim,
+          horaInscricaoInicio: data.horaInscricaoInicio,
+          horaInscricaoFim: data.horaInscricaoFim,
+          dateInicio: data.dateInicio,
+          dateFim: data.dateFim,
+          status: data.status,
+        });
+
         setEvento({
           id: docSnap.id,
           titulo: data.title || "Evento Científico",
           subtitulo: data.subtitle || "",
           descricaoCompleta: data.description || "",
           categoria: data.category || "Geral",
-          status: data.status || "Em Breve",
+          status: statusCalculado,
+          dataInscricaoInicio: data.dataInscricaoInicio || "",
+          dataInscricaoFim: data.dataInscricaoFim || "",
+          horaInscricaoInicio: data.horaInscricaoInicio || "",
+          horaInscricaoFim: data.horaInscricaoFim || "",
           modalidade: data.modalidade || "Presencial",
           capacidade: data.capacidade || "",
           localNome,
@@ -460,10 +479,15 @@ export default function EventoDetailsPage({
             <div className="absolute inset-0 p-6 sm:p-8 md:p-10 flex flex-col justify-end text-white">
               {/* Badges Flutuantes */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  {evento.status}
-                </span>
+                {(() => {
+                  const badge = getStatusBadgeConfig(evento.status);
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-sm border ${badge.badgeClass}`}>
+                      <span className={`w-2 h-2 rounded-full ${badge.dotClass}`} />
+                      {evento.status}
+                    </span>
+                  );
+                })()}
 
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-900/80 text-slate-200 backdrop-blur-md border border-white/10">
                   <Tag className="w-3.5 h-3.5 text-blue-400" />
@@ -863,18 +887,54 @@ export default function EventoDetailsPage({
                 </div>
               )}
 
-              {/* Botão de Ação Principal */}
+              {/* Botão de Ação Principal e Status de Inscrição */}
               <div className="pt-2 space-y-3">
-                <a
-                  href={evento.site && evento.site !== "#" ? evento.site : "#"}
-                  target={evento.site && evento.site !== "#" ? "_blank" : undefined}
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Ticket className="w-5 h-5" />
-                  <span>Realizar Inscrição</span>
-                  <ExternalLink className="w-4 h-4 opacity-80" />
-                </a>
+                {evento.status === "Inscrições Abertas" ? (
+                  <a
+                    href={evento.site && evento.site !== "#" ? evento.site : "#"}
+                    target={evento.site && evento.site !== "#" ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Ticket className="w-5 h-5" />
+                    <span>Realizar Inscrição</span>
+                    <ExternalLink className="w-4 h-4 opacity-80" />
+                  </a>
+                ) : evento.status === "Em Breve" ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled
+                      aria-disabled="true"
+                      className="w-full py-3.5 px-6 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 font-bold text-sm border border-slate-200 dark:border-slate-700/60 flex items-center justify-center gap-2 cursor-not-allowed select-none shadow-xs"
+                    >
+                      <Clock className="w-5 h-5 text-amber-500" />
+                      <span>Inscrições em Breve</span>
+                    </button>
+                    <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      {evento.dataInscricaoInicio
+                        ? `As inscrições iniciam em ${formatDateTimeFriendly(evento.dataInscricaoInicio, evento.horaInscricaoInicio)}.`
+                        : "As inscrições serão abertas em breve."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled
+                      aria-disabled="true"
+                      className="w-full py-3.5 px-6 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 font-bold text-sm border border-slate-200 dark:border-slate-700/60 flex items-center justify-center gap-2 cursor-not-allowed select-none shadow-xs"
+                    >
+                      <AlertCircle className="w-5 h-5 text-slate-400" />
+                      <span>Inscrições Encerradas</span>
+                    </button>
+                    <p className="text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      {evento.dataInscricaoFim
+                        ? `O período de inscrições encerrou em ${formatDateTimeFriendly(evento.dataInscricaoFim, evento.horaInscricaoFim)}.`
+                        : "O período de inscrições para este evento já foi encerrado."}
+                    </p>
+                  </div>
+                )}
 
                 {evento.capacidade && (
                   <p className="text-center text-xs text-slate-500 dark:text-slate-400">

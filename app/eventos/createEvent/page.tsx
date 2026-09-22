@@ -6,7 +6,8 @@ import {
     Info, MapPin, AlignLeft, Users, Save, Loader2, Calendar, Ticket, 
     ShieldAlert, ImagePlus, Trash2, Plus, MessageSquare, BookOpen, 
     Landmark, Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle, 
-    ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map
+    ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map,
+    CalendarCheck, AlertCircle
 } from "lucide-react";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -14,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Suspense } from "react";
+import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
 
 function CreateEventContent() {
     const router = useRouter();
@@ -53,6 +55,12 @@ function CreateEventContent() {
     const [horaInicio, setHoraInicio] = useState("");
     const [horaFim, setHoraFim] = useState("");
     const [cargaHoraria, setCargaHoraria] = useState("");
+
+    // 2.1 Período de Inscrições
+    const [dataInscricaoInicio, setDataInscricaoInicio] = useState("");
+    const [dataInscricaoFim, setDataInscricaoFim] = useState("");
+    const [horaInscricaoInicio, setHoraInscricaoInicio] = useState("");
+    const [horaInscricaoFim, setHoraInscricaoFim] = useState("");
 
     // 3. Local
     const [localNaoSeAplica, setLocalNaoSeAplica] = useState(false);
@@ -188,6 +196,11 @@ function CreateEventContent() {
                 setHoraInicio(data.horaInicio || "");
                 setHoraFim(data.horaFim || "");
                 setCargaHoraria(data.workload || "");
+
+                setDataInscricaoInicio(data.dataInscricaoInicio || "");
+                setDataInscricaoFim(data.dataInscricaoFim || "");
+                setHoraInscricaoInicio(data.horaInscricaoInicio || "");
+                setHoraInscricaoFim(data.horaInscricaoFim || "");
 
                 if (data.local) {
                     setLocalNaoSeAplica(false);
@@ -522,11 +535,24 @@ function CreateEventContent() {
                 };
             }));
 
+            const statusCalculado = getEventRegistrationStatus({
+                dataInscricaoInicio,
+                dataInscricaoFim,
+                horaInscricaoInicio,
+                horaInscricaoFim,
+                dateInicio: dataInicio,
+                dateFim: dataFim,
+            });
+
             // 5. Montar Objeto
             const eventoObj = {
                 title: nomeEvento, 
                 category: categoria, 
-                status: "Em Breve", 
+                status: statusCalculado, 
+                dataInscricaoInicio,
+                dataInscricaoFim,
+                horaInscricaoInicio,
+                horaInscricaoFim,
                 img: publicUrl,
                 modalidade, 
                 capacidade, 
@@ -930,38 +956,125 @@ function CreateEventContent() {
                         )}
 
                         {/* 2. Datas */}
-                        {activeTab === "datas" && (
-                            <div className="space-y-6 animate-in fade-in">
-                                <div className="flex items-center gap-3 pb-4 border-b border-slate-200 dark:border-blue-900/40">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                                        <Calendar className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Datas e Horários</h2>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">Estabeleça o período de realização e os horários do evento.</p>
-                                    </div>
-                                </div>
+                        {activeTab === "datas" && (() => {
+                            const statusPreview = getEventRegistrationStatus({
+                                dataInscricaoInicio,
+                                dataInscricaoFim,
+                                horaInscricaoInicio,
+                                horaInscricaoFim,
+                            });
+                            const badgeConfig = getStatusBadgeConfig(statusPreview);
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className={labelClass}>Data de Início</label>
-                                        <input type="date" value={dataInicio} onChange={e=>setDataInicio(e.target.value)} className={inputClass} />
+                            return (
+                                <div className="space-y-8 animate-in fade-in">
+                                    {/* 2.1 Período do Evento */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-blue-900/40">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
+                                                <Calendar className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Datas e Horários do Evento</h2>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Estabeleça o período de realização e os horários em que o evento acontecerá.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Data de Início do Evento</label>
+                                                <input type="date" value={dataInicio} onChange={e=>setDataInicio(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Data de Término do Evento</label>
+                                                <input type="date" value={dataFim} onChange={e=>setDataFim(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Horário de Início do Evento</label>
+                                                <input type="time" value={horaInicio} onChange={e=>setHoraInicio(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Horário de Término do Evento</label>
+                                                <input type="time" value={horaFim} onChange={e=>setHoraFim(e.target.value)} className={inputClass} />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className={labelClass}>Data de Término</label>
-                                        <input type="date" value={dataFim} onChange={e=>setDataFim(e.target.value)} className={inputClass} />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className={labelClass}>Horário de Início</label>
-                                        <input type="time" value={horaInicio} onChange={e=>setHoraInicio(e.target.value)} className={inputClass} />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className={labelClass}>Horário de Término</label>
-                                        <input type="time" value={horaFim} onChange={e=>setHoraFim(e.target.value)} className={inputClass} />
+
+                                    {/* 2.2 Período das Inscrições */}
+                                    <div className="space-y-4 pt-2">
+                                        <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-blue-900/40">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
+                                                <Ticket className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Período das Inscrições</h2>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    Defina a janela de datas em que os participantes poderão se inscrever.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Data de Início das Inscrições</label>
+                                                <input type="date" value={dataInscricaoInicio} onChange={e=>setDataInscricaoInicio(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Horário de Início das Inscrições</label>
+                                                <input type="time" value={horaInscricaoInicio} onChange={e=>setHoraInscricaoInicio(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Data de Término das Inscrições</label>
+                                                <input type="date" value={dataInscricaoFim} onChange={e=>setDataInscricaoFim(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className={labelClass}>Horário de Término das Inscrições</label>
+                                                <input type="time" value={horaInscricaoFim} onChange={e=>setHoraInscricaoFim(e.target.value)} className={inputClass} />
+                                            </div>
+                                        </div>
+
+                                        {/* Card de Demonstração e Status em Tempo Real */}
+                                        <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-blue-900/50 bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 dark:from-[#071321] dark:via-[#0c1e33] dark:to-[#071321] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                            <div className="space-y-1">
+                                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                                    Status Calculado do Evento
+                                                </span>
+                                                <div className="flex items-center gap-2 pt-0.5">
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${badgeConfig.badgeClass}`}>
+                                                        <span className={`w-2 h-2 rounded-full ${badgeConfig.dotClass}`} />
+                                                        {statusPreview}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
+                                                    {statusPreview === "Em Breve" && (
+                                                        dataInscricaoInicio 
+                                                            ? `O evento será exibido como "Em Breve" e o botão de inscrição ficará indisponível até ${formatDateTimeFriendly(dataInscricaoInicio, horaInscricaoInicio)}.` 
+                                                            : "Preencha a data de início das inscrições para programar a abertura automática."
+                                                    )}
+                                                    {statusPreview === "Inscrições Abertas" && (
+                                                        `O evento está no período ativo de inscrições! O status exibirá "Inscrições Abertas" e o botão de inscrição estará liberado para o público.${dataInscricaoFim ? ` Encerra em ${formatDateTimeFriendly(dataInscricaoFim, horaInscricaoFim)}.` : ""}`
+                                                    )}
+                                                    {statusPreview === "Inscrições Encerradas" && (
+                                                        `O período de inscrições encerrou${dataInscricaoFim ? ` em ${formatDateTimeFriendly(dataInscricaoFim, horaInscricaoFim)}` : ""}. O status exibirá "Inscrições Encerradas" e o botão de inscrição ficará indisponível.`
+                                                    )}
+                                                </p>
+                                            </div>
+
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 shrink-0 self-start sm:self-center bg-white dark:bg-[#0c1e33] px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/40 shadow-xs">
+                                                {statusPreview === "Inscrições Abertas" ? (
+                                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                                                        <Check className="w-4 h-4" /> Botão Liberado
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                                                        <Clock className="w-4 h-4 text-amber-500" /> Botão Indisponível
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* 3. Local */}
                         {activeTab === "local" && (

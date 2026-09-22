@@ -9,6 +9,7 @@ import {
   Share2,
   Tag,
 } from "lucide-react";
+import { getStatusBadgeConfig } from "@/lib/eventStatus";
 
 export interface Palestrante {
   nome: string;
@@ -36,6 +37,10 @@ export interface Evento {
   descricaoCompleta?: string;
   categoria: string;
   status: string;
+  dataInscricaoInicio?: string;
+  dataInscricaoFim?: string;
+  horaInscricaoInicio?: string;
+  horaInscricaoFim?: string;
   local: string;
   cidadeEstado: string;
   data: string;
@@ -108,10 +113,15 @@ export default function EventCard({ evento, onVerDetalhes }: EventCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
 
         {/* Status Badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide bg-blue-600/90 text-white backdrop-blur-md shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{evento.status}</span>
-        </div>
+        {(() => {
+          const badge = getStatusBadgeConfig(evento.status);
+          return (
+            <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide backdrop-blur-md shadow-sm border ${badge.badgeClass}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${badge.dotClass}`} />
+              <span>{evento.status}</span>
+            </div>
+          );
+        })()}
 
         {/* Badge de Categoria / Tag */}
         <div className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium tracking-wide bg-slate-900/75 text-slate-200 backdrop-blur-md border border-white/10">

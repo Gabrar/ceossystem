@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, query, where, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getEventRegistrationStatus, getStatusBadgeConfig } from "@/lib/eventStatus";
 
 export default function MeusEventosPage() {
   const { user, userData } = useAuth();
@@ -44,42 +45,51 @@ export default function MeusEventosPage() {
     try {
       setLoading(true);
 
-      if (isPromotor) {
-        // Busca eventos criados pelo promotor logado
-        const q = query(
-          collection(db, "events"),
-          where("userId", "==", user.uid)
-        );
-        const snap = await getDocs(q);
-        let lista = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-
-        // Se não achou por userId, tenta por promotorEmail
-        if (lista.length === 0 && user.email) {
-          const qEmail = query(
-            collection(db, "events"),
-            where("promotorEmail", "==", user.email)
-          );
-          const snapEmail = await getDocs(qEmail);
-          lista = snapEmail.docs.map((d) => ({
+        const normalizarEvento = (d: any) => {
+          const data = d.data();
+          const statusCalculado = getEventRegistrationStatus({
+            dataInscricaoInicio: data.dataInscricaoInicio,
+            dataInscricaoFim: data.dataInscricaoFim,
+            horaInscricaoInicio: data.horaInscricaoInicio,
+            horaInscricaoFim: data.horaInscricaoFim,
+            dateInicio: data.dateInicio,
+            dateFim: data.dateFim,
+            status: data.status,
+          });
+          return {
             id: d.id,
-            ...d.data(),
-          }));
-        }
+            ...data,
+            status: statusCalculado,
+          };
+        };
 
-        setEventos(lista);
-      } else {
-        // Para participantes, traz eventos onde há interesse ou inscrições
-        const q = query(collection(db, "events"));
-        const snap = await getDocs(q);
-        const lista = snap.docs.slice(0, 2).map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setEventos(lista);
-      }
+        if (isPromotor) {
+          // Busca eventos criados pelo promotor logado
+          const q = query(
+            collection(db, "events"),
+            where("userId", "==", user.uid)
+          );
+          const snap = await getDocs(q);
+          let lista = snap.docs.map(normalizarEvento);
+
+          // Se não achou por userId, tenta por promotorEmail
+          if (lista.length === 0 && user.email) {
+            const qEmail = query(
+              collection(db, "events"),
+              where("promotorEmail", "==", user.email)
+            );
+            const snapEmail = await getDocs(qEmail);
+            lista = snapEmail.docs.map(normalizarEvento);
+          }
+
+          setEventos(lista);
+        } else {
+          // Para participantes, traz eventos onde há interesse ou inscrições
+          const q = query(collection(db, "events"));
+          const snap = await getDocs(q);
+          const lista = snap.docs.slice(0, 2).map(normalizarEvento);
+          setEventos(lista);
+        }
     } catch (error) {
       console.error("Erro ao carregar meus eventos:", error);
     } finally {
@@ -140,13 +150,13 @@ export default function MeusEventosPage() {
       </div>
 
       {/* Barra de Filtros */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-blue-900/40 pb-3">
-        {["Todos", "Em Breve", "Inscrições Abertas", "Encerrado"].map((st) => (
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-blue-900/40 pb-3 overflow-x-auto">
+        {["Todos", "Em Breve", "Inscrições Abertas", "Inscrições Encerradas"].map((st) => (
           <button
             key={st}
             type="button"
             onClick={() => setFiltroStatus(st)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors shrink-0 ${
               filtroStatus === st
                 ? "bg-blue-600 text-white"
                 : "bg-slate-100 dark:bg-[#071321] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-950/60"
@@ -177,9 +187,14 @@ export default function MeusEventosPage() {
                   fill
                   className="object-cover"
                 />
-                <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-600 text-white shadow-sm">
-                  {evento.status || "Em Breve"}
-                </div>
+                {(() => {
+                  const badge = getStatusBadgeConfig(evento.status || "Em Breve");
+                  return (
+                    <div className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.badgeClass}`}>
+                      {evento.status || "Em Breve"}
+                    </div>
+                  );
+                })()}
                 <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-900/80 text-white backdrop-blur-md">
                   {evento.category || "Geral"}
                 </div>
