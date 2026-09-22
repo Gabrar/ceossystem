@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import EventCard, { Evento } from "@/components/EventCard";
-import Modal from "@/components/Modal";
 import { Search, X, SlidersHorizontal, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs } from "firebase/firestore";
@@ -12,18 +11,7 @@ import Link from "next/link";
 export default function EventosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
-  const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { userData } = useAuth();
-
-  const handleOpenModal = (evento: Evento) => {
-    setSelectedEvento(evento);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
@@ -180,7 +168,6 @@ export default function EventosPage() {
                 <EventCard
                   key={evento.id}
                   evento={evento}
-                  onVerDetalhes={handleOpenModal}
                 />
               ))}
             </div>
@@ -208,13 +195,6 @@ export default function EventosPage() {
         </section>
 
       </div>
-
-      {/* Modal de Detalhes do Evento */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        evento={selectedEvento}
-      />
     </main>
   );
 }

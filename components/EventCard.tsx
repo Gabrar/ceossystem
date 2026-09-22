@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Calendar,
@@ -57,25 +59,35 @@ interface EventCardProps {
 }
 
 export default function EventCard({ evento, onVerDetalhes }: EventCardProps) {
+  const router = useRouter();
+
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const eventUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/eventos/${evento.id}`
+      : `/eventos/${evento.id}`;
+
     if (navigator.share) {
       navigator
         .share({
           title: evento.titulo,
           text: `${evento.titulo} em ${evento.cidadeEstado} (${evento.data})`,
-          url: window.location.href,
+          url: eventUrl,
         })
         .catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(eventUrl);
       alert("Link do evento copiado para a área de transferência!");
     }
   };
 
   const handleCardClick = () => {
-    onVerDetalhes?.(evento);
+    if (onVerDetalhes) {
+      onVerDetalhes(evento);
+    } else {
+      router.push(`/eventos/${evento.id}`);
+    }
   };
 
   return (
@@ -159,17 +171,20 @@ export default function EventCard({ evento, onVerDetalhes }: EventCardProps) {
 
         {/* Rodapé do Card com Ações */}
         <div className="pt-3.5 border-t border-slate-100 dark:border-blue-900/30 flex items-center gap-2">
-          <button
-            type="button"
+          <Link
+            href={`/eventos/${evento.id}`}
             onClick={(e) => {
-              e.stopPropagation();
-              onVerDetalhes?.(evento);
+              if (onVerDetalhes) {
+                e.preventDefault();
+                e.stopPropagation();
+                onVerDetalhes(evento);
+              }
             }}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md hover:shadow-blue-500/25 transition-all duration-200 cursor-pointer group/btn"
           >
             <span>Ver Detalhes</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-          </button>
+          </Link>
 
           <button
             type="button"

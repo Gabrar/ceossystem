@@ -123,7 +123,7 @@ export default function Navbar() {
                         {dropdownOpen && (
                             <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-xl shadow-xl overflow-hidden py-1 z-50">
                                 <Link 
-                                    href="/painel" 
+                                    href="/usuario/painel" 
                                     onClick={() => setDropdownOpen(false)}
                                     className="flex items-center gap-2 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-blue-900/20 transition-colors"
                                 >
@@ -131,7 +131,7 @@ export default function Navbar() {
                                     <span>Painel</span>
                                 </Link>
                                 <Link 
-                                    href="/meus-eventos" 
+                                    href="/usuario/painel/meus-eventos" 
                                     onClick={() => setDropdownOpen(false)}
                                     className="flex items-center gap-2 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-blue-900/20 transition-colors"
                                 >
@@ -139,7 +139,7 @@ export default function Navbar() {
                                     <span>Meus Eventos</span>
                                 </Link>
                                 <Link 
-                                    href="/perfil" 
+                                    href="/usuario/perfil" 
                                     onClick={() => setDropdownOpen(false)}
                                     className="flex items-center gap-2 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-blue-900/20 transition-colors"
                                 >

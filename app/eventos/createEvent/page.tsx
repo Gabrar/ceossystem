@@ -8,17 +8,24 @@ import {
     Landmark, Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle, 
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map
 } from "lucide-react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { Suspense } from "react";
 
-export default function CreateEventPage() {
+function CreateEventContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get("id");
+    const isEditing = Boolean(editId);
+
     const { user, userData, loading: authLoading } = useAuth();
     const [activeTab, setActiveTab] = useState("basicas");
     const [isLoading, setIsLoading] = useState(false);
+    const [existingImg, setExistingImg] = useState("");
+    const [loadingExisting, setLoadingExisting] = useState(false);
 
     const isPromotor = userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor";
 
@@ -147,6 +154,147 @@ export default function CreateEventPage() {
     const [dadosBancarios, setDadosBancarios] = useState({
         banco: "", agencia: "", nomeBanco: "", conta: "", titular: "", documentoTitular: "", chavePix: ""
     });
+
+    useEffect(() => {
+        async function carregarEventoParaEdicao() {
+            if (!editId || !user) return;
+            try {
+                setLoadingExisting(true);
+                const docRef = doc(db, "events", editId);
+                const snap = await getDoc(docRef);
+                if (!snap.exists()) {
+                    alert("Evento não encontrado para edição.");
+                    router.replace("/usuario/painel/meus-eventos");
+                    return;
+                }
+                const data = snap.data();
+                if (data.userId && data.userId !== user.uid) {
+                    alert("Você não possui permissão para editar este evento.");
+                    router.replace("/usuario/painel/meus-eventos");
+                    return;
+                }
+
+                setNomeEvento(data.title || "");
+                setCategoria(data.category || "Seminário");
+                setModalidade(data.modalidade || "Presencial");
+                setCapacidade(data.capacidade || "");
+                if (data.img) {
+                    setExistingImg(data.img);
+                    setImagePreview(data.img);
+                }
+
+                setDataInicio(data.dateInicio || "");
+                setDataFim(data.dateFim || "");
+                setHoraInicio(data.horaInicio || "");
+                setHoraFim(data.horaFim || "");
+                setCargaHoraria(data.workload || "");
+
+                if (data.local) {
+                    setLocalNaoSeAplica(false);
+                    setCep(data.local.cep || "");
+                    setEndereco(data.local.endereco || "");
+                    setNumero(data.local.numero || "");
+                    setBairro(data.local.bairro || "");
+                    setCidade(data.local.cidade || "");
+                    setNomeLocal(data.local.nomeLocal || "");
+                } else {
+                    setLocalNaoSeAplica(true);
+                }
+
+                if (data.lotes && data.lotes.length > 0) {
+                    setIngressosNaoSeAplica(false);
+                    setLotes(data.lotes.map((l: any, i: number) => ({ id: Date.now() + i, ...l })));
+                } else {
+                    setIngressosNaoSeAplica(true);
+                }
+
+                if (data.description) {
+                    setDescricaoNaoSeAplica(false);
+                    setDescricao(data.description);
+                }
+                if (data.redesSociais) {
+                    setInstagram(data.redesSociais.instagram || "");
+                    setLinkedin(data.redesSociais.linkedin || "");
+                    setFacebook(data.redesSociais.facebook || "");
+                }
+
+                if (data.mensagens && data.mensagens.length > 0) {
+                    setMensagensNaoSeAplica(false);
+                    setMensagens(data.mensagens.map((texto: string, i: number) => ({ id: Date.now() + i, texto })));
+                } else {
+                    setMensagensNaoSeAplica(true);
+                }
+
+                if (data.palestrantes && data.palestrantes.length > 0) {
+                    setPalestrantesNaoSeAplica(false);
+                    setPalestrantes(data.palestrantes.map((p: any, i: number) => ({
+                        id: Date.now() + i,
+                        foto: null,
+                        fotoPreview: p.fotoUrl || p.foto || "",
+                        nome: p.nome || "",
+                        email: p.email || "",
+                        especialidade: p.especialidade || "",
+                        instituicao: p.instituicao || "",
+                        telefone: p.telefone || "",
+                        bio: p.bio || ""
+                    })));
+                } else {
+                    setPalestrantesNaoSeAplica(true);
+                }
+
+                if (data.minicursos && data.minicursos.length > 0) {
+                    setMinicursosNaoSeAplica(false);
+                    setMinicursos(data.minicursos.map((m: any, i: number) => ({
+                        id: Date.now() + i,
+                        nome: m.nome || "",
+                        tipo: m.tipo || "Teórico",
+                        imagem: null,
+                        imagemPreview: m.imagemUrl || "",
+                        local: m.local || "",
+                        descricao: m.descricao || "",
+                        ministrantes: m.ministrantes?.map((mr: any, mi: number) => ({ id: Date.now() + mi, ...mr })) || [{ id: Date.now(), nome: "", email: "" }],
+                        dias: m.dias?.map((d: any, di: number) => ({ id: Date.now() + di, ...d })) || [{ id: Date.now(), data: "", horaInicio: "", horaFim: "" }],
+                        ingressos: m.ingressos?.map((ir: any, ii: number) => ({ id: Date.now() + ii, ...ir })) || [{ id: Date.now(), perfil: "", loteNumero: "1", preco: "", quantidade: "", codigoDesconto: "", valorPromocional: "", dataInicio: "", dataFim: "" }]
+                    })));
+                } else {
+                    setMinicursosNaoSeAplica(true);
+                }
+
+                if (data.administradores && data.administradores.length > 0) {
+                    setAdminsNaoSeAplica(false);
+                    setAdministradores(data.administradores.map((a: any, i: number) => ({ id: Date.now() + i, ...a })));
+                } else {
+                    setAdminsNaoSeAplica(true);
+                }
+
+                if (data.patrocinadores && data.patrocinadores.length > 0) {
+                    setPatrociniosNaoSeAplica(false);
+                    setPatrocinadores(data.patrocinadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
+                }
+
+                if (data.apoiadores && data.apoiadores.length > 0) {
+                    setPatrociniosNaoSeAplica(false);
+                    setApoiadores(data.apoiadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
+                }
+
+                if (data.dadosBancarios) {
+                    setBancarioNaoSeAplica(false);
+                    setDadosBancarios(data.dadosBancarios);
+                } else {
+                    setBancarioNaoSeAplica(true);
+                }
+
+            } catch (e) {
+                console.error("Erro ao carregar dados do evento para edição:", e);
+            } finally {
+                setLoadingExisting(false);
+            }
+        }
+
+        if (!authLoading && user && editId) {
+            carregarEventoParaEdicao();
+        }
+    }, [editId, user, authLoading, router]);
 
     const tabs = [
         { id: "basicas", label: "Básicas", icon: Info, desc: "Identidade, categoria e carga horária" },
@@ -343,22 +491,28 @@ export default function CreateEventPage() {
             };
 
             // 1. Imagem Principal
-            const publicUrl = await uploadFile(imageFile, 'event-logos');
+            const publicUrl = imageFile ? await uploadFile(imageFile, 'event-logos') : existingImg;
 
             // 2. Patrocínios
-            const patroUrls = patrociniosNaoSeAplica ? [] : await Promise.all(patrocinadores.map(async (p) => await uploadFile(p.file, 'patrocinadores')));
-            const apoiUrls = patrociniosNaoSeAplica ? [] : await Promise.all(apoiadores.map(async (a) => await uploadFile(a.file, 'apoiadores')));
+            const patroUrls = patrociniosNaoSeAplica ? [] : await Promise.all(patrocinadores.map(async (p) => {
+                if (p.file) return await uploadFile(p.file, 'patrocinadores');
+                return p.fileName && p.fileName.startsWith("http") ? p.fileName : "";
+            }));
+            const apoiUrls = patrociniosNaoSeAplica ? [] : await Promise.all(apoiadores.map(async (a) => {
+                if (a.file) return await uploadFile(a.file, 'apoiadores');
+                return a.fileName && a.fileName.startsWith("http") ? a.fileName : "";
+            }));
 
             // 3. Palestrantes
             const palestrantesFinais = palestrantesNaoSeAplica ? [] : await Promise.all(palestrantes.map(async (p) => {
-                const fotoUrl = await uploadFile(p.foto, 'palestrantes');
+                const fotoUrl = p.foto ? await uploadFile(p.foto, 'palestrantes') : (p.fotoPreview || "");
                 const { id, foto, fotoPreview, ...rest } = p;
                 return { ...rest, fotoUrl };
             }));
 
             // 4. Minicursos
             const minicursosFinais = minicursosNaoSeAplica ? [] : await Promise.all(minicursos.map(async (m) => {
-                const imagemUrl = await uploadFile(m.imagem, 'minicursos');
+                const imagemUrl = m.imagem ? await uploadFile(m.imagem, 'minicursos') : (m.imagemPreview || "");
                 const { id, imagem, imagemPreview, ministrantes, dias, ingressos, ...rest } = m;
                 return {
                     ...rest, imagemUrl,
@@ -369,7 +523,7 @@ export default function CreateEventPage() {
             }));
 
             // 5. Montar Objeto
-            const novoEvento = {
+            const eventoObj = {
                 title: nomeEvento, 
                 category: categoria, 
                 status: "Em Breve", 
@@ -395,12 +549,23 @@ export default function CreateEventPage() {
                 emphasis: false,
                 userId: user?.uid || null,
                 promotorEmail: user?.email || null,
-                createdAt: new Date().toISOString()
             };
 
-            await addDoc(collection(db, "events"), novoEvento);
-            alert("Evento publicado com sucesso!");
-            router.push("/eventos");
+            if (isEditing && editId) {
+                await updateDoc(doc(db, "events", editId), {
+                    ...eventoObj,
+                    updatedAt: new Date().toISOString()
+                });
+                alert("Evento atualizado com sucesso!");
+                router.push(`/eventos/${editId}`);
+            } else {
+                await addDoc(collection(db, "events"), {
+                    ...eventoObj,
+                    createdAt: new Date().toISOString()
+                });
+                alert("Evento publicado com sucesso!");
+                router.push("/eventos");
+            }
         } catch (error) {
             console.error("Erro ao salvar:", error);
             alert("Erro ao salvar o evento. Verifique os dados e tente novamente.");
@@ -439,13 +604,13 @@ export default function CreateEventPage() {
     const cardClass = "p-5 sm:p-6 border border-slate-200 dark:border-blue-900/40 rounded-2xl bg-white dark:bg-[#071321]/40 space-y-4 shadow-sm";
 
     // 1. Verificando autenticação e permissões
-    if (authLoading) {
+    if (authLoading || loadingExisting) {
         return (
             <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex flex-col items-center justify-center p-4">
                 <div className="flex flex-col items-center gap-3 text-center">
                     <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                        Verificando permissões de acesso...
+                        {loadingExisting ? "Carregando dados do evento para edição..." : "Verificando permissões de acesso..."}
                     </p>
                 </div>
             </main>
@@ -516,17 +681,16 @@ export default function CreateEventPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <Link 
-                            href="/eventos" 
+                            href="/usuario/painel/meus-eventos" 
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors mb-1 group"
                         >
                             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-                            Voltar para Eventos
+                            Voltar para Meus Eventos
                         </Link>
                         <div className="flex items-center gap-3">
                             <h1 className="font-montserrat text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                                Criar <span className="text-blue-600 dark:text-blue-400">Evento</span>
+                                {isEditing ? "Editar" : "Criar"} <span className="text-blue-600 dark:text-blue-400">Evento</span>
                             </h1>
-                            
                         </div>
                     </div>
 
@@ -536,7 +700,7 @@ export default function CreateEventPage() {
                         className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all duration-200 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {isLoading ? "Publicando..." : "Publicar Evento"}
+                        {isLoading ? "Salvando..." : (isEditing ? "Salvar Alterações" : "Publicar Evento")}
                     </button>
                 </div>
 
@@ -1856,7 +2020,7 @@ export default function CreateEventPage() {
                                 className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
                             >
                                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Publicar Evento
+                                {isEditing ? "Salvar Alterações" : "Publicar Evento"}
                             </button>
                         ) : (
                             <button
@@ -1873,5 +2037,17 @@ export default function CreateEventPage() {
                 </div>
             </div>
         </main>
+    );
+}
+
+export default function CreateEventPage() {
+    return (
+        <Suspense fallback={
+            <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex items-center justify-center p-4">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </main>
+        }>
+            <CreateEventContent />
+        </Suspense>
     );
 }
