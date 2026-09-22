@@ -196,10 +196,7 @@ export default function DashboardPage() {
         />
 
         <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-md text-white border border-white/20">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Painel Central Céos System</span>
-          </div>
+          
 
           <h1 className="font-montserrat text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-snug">
             Olá, {userName}!
@@ -400,14 +397,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-3xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Certificação Autêntica
-            </span>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Todos os certificados emitidos na Céos System contam com chave criptográfica única e validação por QR Code, válidos para horas complementares em instituições de ensino superior.
-            </p>
-          </div>
+          
         </div>
 
       </div>
