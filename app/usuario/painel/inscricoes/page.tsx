@@ -17,8 +17,9 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { buscarInscricoesDoUsuario } from "@/lib/inscricoes";
 
 interface InscricaoItem {
   id: string;
@@ -48,56 +49,72 @@ export default function InscricoesPage() {
         setLoading(true);
         setError(null);
 
-        // Busca inscrições reais associadas ao usuário logado no Firestore
-        const qByUid = query(
-          collection(db, "inscricoes"),
-          where("userId", "==", user.uid)
-        );
-        const snapUid = await getDocs(qByUid);
+        // Busca inscrições reais com tolerância a dados legados e auto-vínculo
+        const inscricoesBrutas = await buscarInscricoesDoUsuario(user);
 
-        let docs = snapUid.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            eventoTitulo: data.eventoTitulo || data.eventTitle || data.title || "Inscrição em Evento",
-            categoria: data.categoria || data.category || "Evento Científico",
-            lote: data.lote || data.batch || "Inscrição Geral",
-            valor: data.valor || data.preco || "",
-            data: data.data || data.date || "A definir",
-            local: data.local || data.cidade || "Local informado pelo evento",
-            status: data.status || "Confirmada",
-            dataCompra: data.dataCompra || (data.createdAt ? new Date(data.createdAt).toLocaleDateString("pt-BR") : ""),
-            codigoIngresso: data.codigoIngresso || data.ticketCode || d.id,
-            eventoId: data.eventoId || data.eventId || "",
-          };
-        });
+        // Enriquece com dados atualizados do evento na coleção 'events'
+        const docsEnriquecidos: InscricaoItem[] = await Promise.all(
+          inscricoesBrutas.map(async (item) => {
+            let titulo = item.eventoTitulo;
+            let dataEvento = "Data a confirmar";
+            let localEvento = "Local informado pelo evento";
+            let categoriaEvento = item.lote || "Evento Científico";
 
-        // Caso não encontre por UID, busca por e-mail
-        if (docs.length === 0 && user.email) {
-          const qByEmail = query(
-            collection(db, "inscricoes"),
-            where("userEmail", "==", user.email)
-          );
-          const snapEmail = await getDocs(qByEmail);
-          docs = snapEmail.docs.map((d) => {
-            const data = d.data();
+            if (item.eventoId) {
+              try {
+                const evSnap = await getDoc(doc(db, "events", item.eventoId));
+                if (evSnap.exists()) {
+                  const evData = evSnap.data();
+                  if (!titulo) titulo = evData.title;
+                  categoriaEvento = evData.category || categoriaEvento;
+                  if (evData.dateInicio) {
+                    dataEvento = evData.dateInicio.split("-").reverse().join("/");
+                    if (evData.dateFim) {
+                      dataEvento += ` a ${evData.dateFim.split("-").reverse().join("/")}`;
+                    }
+                  } else if (evData.date) {
+                    dataEvento = evData.date;
+                  }
+                  if (evData.local?.cidade) {
+                    localEvento = `${evData.local?.nomeLocal ? evData.local.nomeLocal + " - " : ""}${evData.local.cidade}`;
+                  } else if (evData["city-state"]) {
+                    localEvento = evData["city-state"];
+                  }
+                }
+              } catch (e) {
+                console.log("Erro ao enriquecer evento da inscrição:", e);
+              }
+            }
+
+            const valorFormatado = item.valor
+              ? item.valor.includes("R$")
+                ? item.valor
+                : isNaN(Number(item.valor))
+                  ? item.valor
+                  : `R$ ${Number(item.valor).toFixed(2).replace(".", ",")}`
+              : "Gratuito";
+
+            const statusNorm = item.status?.toLowerCase() === "confirmado" || item.status?.toLowerCase() === "pago"
+              ? "Confirmada"
+              : item.status || "Confirmada";
+
             return {
-              id: d.id,
-              eventoTitulo: data.eventoTitulo || data.eventTitle || data.title || "Inscrição em Evento",
-              categoria: data.categoria || data.category || "Evento Científico",
-              lote: data.lote || data.batch || "Inscrição Geral",
-              valor: data.valor || data.preco || "",
-              data: data.data || data.date || "A definir",
-              local: data.local || data.cidade || "Local informado pelo evento",
-              status: data.status || "Confirmada",
-              dataCompra: data.dataCompra || (data.createdAt ? new Date(data.createdAt).toLocaleDateString("pt-BR") : ""),
-              codigoIngresso: data.codigoIngresso || data.ticketCode || d.id,
-              eventoId: data.eventoId || data.eventId || "",
+              id: item.id,
+              eventoTitulo: titulo || "Evento Científico",
+              categoria: categoriaEvento,
+              lote: item.lote || "Inscrição Geral",
+              valor: valorFormatado,
+              data: dataEvento,
+              local: localEvento,
+              status: statusNorm,
+              dataCompra: item.dataCompra || "Recente",
+              codigoIngresso: item.ticketId || item.id,
+              eventoId: item.eventoId,
             };
-          });
-        }
+          })
+        );
 
-        setInscricoes(docs);
+        setInscricoes(docsEnriquecidos);
       } catch (err: any) {
         console.error("Erro ao buscar inscrições:", err);
         setError("Não foi possível carregar as inscrições do banco de dados.");

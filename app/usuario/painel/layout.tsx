@@ -20,7 +20,8 @@ import {
   Plus,
   Shield,
   Loader2,
-  Settings
+  Settings,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -58,6 +59,12 @@ const menuItems = [
     href: "/usuario/painel/trabalhos",
     icon: FileText,
     description: "Submissões e avaliações",
+  },
+  {
+    name: "Analytics",
+    href: "/usuario/painel/analytics",
+    icon: BarChart3,
+    description: "Métricas e inscritos dos eventos",
   },
   {
     name: "Ajuda & Suporte",
@@ -220,6 +227,11 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
           </p>
 
           {menuItems.map((item) => {
+            // Se o item for Analytics e o usuário não for promotor, não exibe
+            if (item.href === "/usuario/painel/analytics" && !isPromotor) {
+              return null;
+            }
+
             const Icon = item.icon;
             const isActive =
               pathname === item.href ||

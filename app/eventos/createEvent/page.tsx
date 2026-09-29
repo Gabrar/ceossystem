@@ -157,7 +157,15 @@ function CreateEventContent() {
     const [patrocinadores, setPatrocinadores] = useState([{ id: Date.now(), file: null as File | null, fileName: "" }]);
     const [apoiadores, setApoiadores] = useState([{ id: Date.now(), file: null as File | null, fileName: "" }]);
 
-    // 11. Financeiro
+    // 11. Programação
+    const [programacaoNaoSeAplica, setProgramacaoNaoSeAplica] = useState(false);
+    const [programacao, setProgramacao] = useState([{
+        id: Date.now(),
+        data: "",
+        atividades: [{ id: Date.now(), horaInicio: "", horaFim: "", titulo: "", local: "", palestrante: "" }]
+    }]);
+
+    // 12. Financeiro
     const [bancarioNaoSeAplica, setBancarioNaoSeAplica] = useState(false);
     const [dadosBancarios, setDadosBancarios] = useState({
         banco: "", agencia: "", nomeBanco: "", conta: "", titular: "", documentoTitular: "", chavePix: ""
@@ -290,6 +298,24 @@ function CreateEventContent() {
                     setApoiadores(data.apoiadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
                 }
 
+                if (data.programacao && Array.isArray(data.programacao) && data.programacao.length > 0) {
+                    setProgramacaoNaoSeAplica(false);
+                    setProgramacao(data.programacao.map((d: any, index: number) => ({
+                        id: Date.now() + index,
+                        data: d.data || "",
+                        atividades: d.atividades ? d.atividades.map((a: any, aIndex: number) => ({
+                            id: Date.now() + 1000 + aIndex,
+                            horaInicio: a.horaInicio || "",
+                            horaFim: a.horaFim || "",
+                            titulo: a.titulo || "",
+                            local: a.local || "",
+                            palestrante: a.palestrante || ""
+                        })) : []
+                    })));
+                } else {
+                    setProgramacaoNaoSeAplica(true);
+                }
+
                 if (data.dadosBancarios) {
                     setBancarioNaoSeAplica(false);
                     setDadosBancarios(data.dadosBancarios);
@@ -317,6 +343,7 @@ function CreateEventContent() {
         { id: "mensagens", label: "Mensagens", icon: MessageSquare, desc: "Carrossel de avisos rápidos" },
         { id: "palestrantes", label: "Palestrantes", icon: Users, desc: "Convidados e especialistas" },
         { id: "minicursos", label: "Minicursos", icon: BookOpen, desc: "Oficinas, workshops e aulas" },
+        { id: "programacao", label: "Programação", icon: Clock, desc: "Grade de atividades por dia" },
         { id: "equipe", label: "Equipe", icon: ShieldAlert, desc: "Administradores e permissões" },
         { id: "patrocinios", label: "Patrocínios", icon: ImagePlus, desc: "Marcas parceiras e apoiadores" },
         { id: "financeiro", label: "Financeiro", icon: Landmark, desc: "Conta e chave PIX para repasses" },
@@ -475,6 +502,39 @@ function CreateEventContent() {
         setMinicursos(prev => prev.filter(m => m.id !== minicursoId));
     };
 
+    // --- Helpers Programação ---
+    const addDiaProgramacao = () => {
+        setProgramacao(prev => [...prev, {
+            id: Date.now(),
+            data: "",
+            atividades: [{ id: Date.now(), horaInicio: "", horaFim: "", titulo: "", local: "", palestrante: "" }]
+        }]);
+    };
+    const removeDiaProgramacao = (diaId: number) => {
+        setProgramacao(prev => prev.filter(d => d.id !== diaId));
+    };
+    const updateDiaProgramacao = (diaId: number, field: string, value: string) => {
+        setProgramacao(prev => prev.map(d => d.id === diaId ? { ...d, [field]: value } : d));
+    };
+    const addAtividadeProgramacao = (diaId: number) => {
+        setProgramacao(prev => prev.map(d => d.id === diaId ? {
+            ...d,
+            atividades: [...d.atividades, { id: Date.now(), horaInicio: "", horaFim: "", titulo: "", local: "", palestrante: "" }]
+        } : d));
+    };
+    const removeAtividadeProgramacao = (diaId: number, ativId: number) => {
+        setProgramacao(prev => prev.map(d => d.id === diaId ? {
+            ...d,
+            atividades: d.atividades.filter(a => a.id !== ativId)
+        } : d));
+    };
+    const updateAtividadeProgramacao = (diaId: number, ativId: number, field: string, value: string) => {
+        setProgramacao(prev => prev.map(d => d.id === diaId ? {
+            ...d,
+            atividades: d.atividades.map(a => a.id === ativId ? { ...a, [field]: value } : a)
+        } : d));
+    };
+
     // --- Handlers Básicos ---
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -498,7 +558,10 @@ function CreateEventContent() {
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
                 const filePath = `${folder}/${fileName}`;
                 const { error } = await supabase.storage.from('events').upload(filePath, file);
-                if (error) return "";
+                if (error) {
+                    console.error("Erro ao fazer upload da imagem para o Supabase (pasta " + folder + "):", error);
+                    return "";
+                }
                 const { data } = supabase.storage.from('events').getPublicUrl(filePath);
                 return data.publicUrl;
             };
@@ -518,14 +581,14 @@ function CreateEventContent() {
 
             // 3. Palestrantes
             const palestrantesFinais = palestrantesNaoSeAplica ? [] : await Promise.all(palestrantes.map(async (p) => {
-                const fotoUrl = p.foto ? await uploadFile(p.foto, 'palestrantes') : (p.fotoPreview || "");
+                const fotoUrl = p.foto ? await uploadFile(p.foto, 'palestrantes') : (p.fotoPreview && p.fotoPreview.startsWith("http") ? p.fotoPreview : "");
                 const { id, foto, fotoPreview, ...rest } = p;
                 return { ...rest, fotoUrl };
             }));
 
             // 4. Minicursos
             const minicursosFinais = minicursosNaoSeAplica ? [] : await Promise.all(minicursos.map(async (m) => {
-                const imagemUrl = m.imagem ? await uploadFile(m.imagem, 'minicursos') : (m.imagemPreview || "");
+                const imagemUrl = m.imagem ? await uploadFile(m.imagem, 'minicursos') : (m.imagemPreview && m.imagemPreview.startsWith("http") ? m.imagemPreview : "");
                 const { id, imagem, imagemPreview, ministrantes, dias, ingressos, ...rest } = m;
                 return {
                     ...rest, imagemUrl,
@@ -568,6 +631,10 @@ function CreateEventContent() {
                 mensagens: mensagensNaoSeAplica ? [] : mensagens.map(m => m.texto),
                 palestrantes: palestrantesFinais,
                 minicursos: minicursosFinais,
+                programacao: programacaoNaoSeAplica ? [] : programacao.map(({id, ...rest}) => ({
+                    ...rest,
+                    atividades: rest.atividades.map(({id, ...aRest}) => aRest)
+                })),
                 administradores: adminsNaoSeAplica ? [] : administradores.map(({id, ...rest}) => rest),
                 patrocinadores: patroUrls.filter(u => u !== ""),
                 apoiadores: apoiUrls.filter(u => u !== ""),
@@ -1419,8 +1486,11 @@ function CreateEventContent() {
                                                                 onChange={e=>{
                                                                     const f = e.target.files?.[0];
                                                                     if(f) {
-                                                                        updateArray(setPalestrantes, palestrantes, p.id, 'foto', f);
-                                                                        updateArray(setPalestrantes, palestrantes, p.id, 'fotoPreview', URL.createObjectURL(f));
+                                                                        setPalestrantes(prev => prev.map(item => 
+                                                                            item.id === p.id 
+                                                                                ? { ...item, foto: f, fotoPreview: URL.createObjectURL(f) } 
+                                                                                : item
+                                                                        ));
                                                                     }
                                                                 }} 
                                                                 className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 dark:file:bg-blue-950 dark:file:text-blue-300 hover:file:bg-blue-100 cursor-pointer" 
@@ -1429,8 +1499,9 @@ function CreateEventContent() {
                                                                 <button 
                                                                     type="button"
                                                                     onClick={()=>{ 
-                                                                        updateArray(setPalestrantes, palestrantes, p.id, 'foto', null); 
-                                                                        updateArray(setPalestrantes, palestrantes, p.id, 'fotoPreview', '');
+                                                                        setPalestrantes(prev => prev.map(item => 
+                                                                            item.id === p.id ? { ...item, foto: null, fotoPreview: '' } : item
+                                                                        ));
                                                                         (document.getElementById(`foto-${p.id}`) as HTMLInputElement).value = ''; 
                                                                     }} 
                                                                     className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg shrink-0 cursor-pointer"
@@ -1671,8 +1742,11 @@ function CreateEventContent() {
                                                                 onChange={e => {
                                                                     const f = e.target.files?.[0];
                                                                     if (f) {
-                                                                        updateMinicurso(m.id, 'imagem', f);
-                                                                        updateMinicurso(m.id, 'imagemPreview', URL.createObjectURL(f));
+                                                                        setMinicursos(prev => prev.map(item =>
+                                                                            item.id === m.id
+                                                                                ? { ...item, imagem: f, imagemPreview: URL.createObjectURL(f) }
+                                                                                : item
+                                                                        ));
                                                                     }
                                                                 }}
                                                                 className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 dark:file:bg-blue-950 dark:file:text-blue-300 hover:file:bg-blue-100 cursor-pointer"
@@ -1681,8 +1755,9 @@ function CreateEventContent() {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        updateMinicurso(m.id, 'imagem', null);
-                                                                        updateMinicurso(m.id, 'imagemPreview', '');
+                                                                        setMinicursos(prev => prev.map(item => 
+                                                                            item.id === m.id ? { ...item, imagem: null, imagemPreview: '' } : item
+                                                                        ));
                                                                         const el = document.getElementById(`img-mini-${m.id}`) as HTMLInputElement;
                                                                         if (el) el.value = '';
                                                                     }}
@@ -2054,7 +2129,111 @@ function CreateEventContent() {
                             </div>
                         )}
 
-                        {/* 10. Financeiro */}
+                        {/* 11. Programação */}
+                        {activeTab === "programacao" && (
+                            <div className="space-y-6 animate-in fade-in">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-blue-900/40">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
+                                            <Clock className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Programação do Evento</h2>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Monte a grade de atividades diárias, com horários e locais.</p>
+                                        </div>
+                                    </div>
+                                    <NaoSeAplicaToggle state={programacaoNaoSeAplica} setState={setProgramacaoNaoSeAplica} />
+                                </div>
+
+                                {!programacaoNaoSeAplica && (
+                                    <div className="space-y-6">
+                                        {programacao.map((dia, dIdx) => (
+                                            <div key={dia.id} className="bg-slate-50/50 dark:bg-[#0c1e33]/50 border border-slate-200 dark:border-blue-900/40 rounded-2xl p-5 relative">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => removeDiaProgramacao(dia.id)} 
+                                                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors cursor-pointer"
+                                                    title="Remover Dia"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                                
+                                                <div className="mb-4 pr-12">
+                                                    <label className={labelClass}>Data do Evento</label>
+                                                    <input 
+                                                        type="date" 
+                                                        value={dia.data} 
+                                                        onChange={e => updateDiaProgramacao(dia.id, 'data', e.target.value)} 
+                                                        className={`${inputClass} w-full sm:w-auto mt-1.5`} 
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {dia.atividades.map((ativ, aIdx) => (
+                                                        <div key={ativ.id} className="bg-white dark:bg-[#071321] border border-slate-200 dark:border-blue-900/50 rounded-xl p-4 relative group">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => removeAtividadeProgramacao(dia.id, ativ.id)} 
+                                                                className="absolute top-3 right-3 p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
+                                                                title="Remover Atividade"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+
+                                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                                                                <div className="sm:col-span-3 grid grid-cols-2 gap-2">
+                                                                    <div>
+                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Início</label>
+                                                                        <input type="time" value={ativ.horaInicio} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaInicio', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Fim</label>
+                                                                        <input type="time" value={ativ.horaFim} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaFim', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="sm:col-span-9 grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
+                                                                    <div className="sm:col-span-3">
+                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Título da Atividade</label>
+                                                                        <input type="text" placeholder="Ex: Credenciamento, Palestra Magna, etc." value={ativ.titulo} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'titulo', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    </div>
+                                                                    <div className="sm:col-span-2">
+                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Professor / Palestrante</label>
+                                                                        <input type="text" placeholder="Nome do responsável" value={ativ.palestrante} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'palestrante', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    </div>
+                                                                    <div className="sm:col-span-1">
+                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Local</label>
+                                                                        <input type="text" placeholder="Ex: Auditório A" value={ativ.local} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'local', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => addAtividadeProgramacao(dia.id)}
+                                                        className="inline-flex items-center gap-1.5 py-2 px-3 mt-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" /> Adicionar Atividade
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        
+                                        <button 
+                                            type="button" 
+                                            onClick={addDiaProgramacao}
+                                            className="w-full py-4 border-2 border-dashed border-slate-300 dark:border-blue-900/60 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer font-semibold"
+                                        >
+                                            <CalendarCheck className="w-6 h-6" />
+                                            <span>Adicionar Novo Dia na Programação</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 12. Financeiro */}
                         {activeTab === "financeiro" && (
                             <div className="space-y-6 animate-in fade-in">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-blue-900/40">

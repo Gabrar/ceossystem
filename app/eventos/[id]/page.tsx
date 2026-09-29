@@ -1,13 +1,17 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, deleteDoc, collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
+import { verificarUsuarioInscritoNoEvento } from "@/lib/inscricoes";
+import ModalInscricaoEvento from "@/components/ModalInscricaoEvento";
+import ModalSubmissaoTrabalho from "@/components/ModalSubmissaoTrabalho";
 import {
   Calendar,
   Clock,
@@ -35,7 +39,14 @@ import {
   Trash2,
   AlertTriangle,
   ShieldCheck,
-  Loader2
+  Loader2,
+  Lock,
+  Send,
+  Upload,
+  FileText,
+  QrCode,
+  X,
+  ArrowRight
 } from "lucide-react";
 
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -87,6 +98,19 @@ interface MinicursoItem {
   ingressos?: Array<{ perfil: string; preco: string; loteNumero?: string }>;
 }
 
+interface ProgramacaoAtividade {
+  horaInicio: string;
+  horaFim: string;
+  titulo: string;
+  local: string;
+  palestrante: string;
+}
+
+interface ProgramacaoDia {
+  data: string;
+  atividades: ProgramacaoAtividade[];
+}
+
 interface LoteItem {
   perfil?: string;
   loteNumero?: string;
@@ -131,6 +155,7 @@ interface EventoDetalhes {
   organizacao?: string;
   palestrantes: PalestranteItem[];
   minicursos: MinicursoItem[];
+  programacao?: ProgramacaoDia[];
   lotes: LoteItem[];
   patrocinadores: string[];
   apoiadores: string[];
@@ -151,7 +176,7 @@ export default function EventoDetailsPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
 
   const [evento, setEvento] = useState<EventoDetalhes | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,6 +184,20 @@ export default function EventoDetailsPage({
   const [copiedLink, setCopiedLink] = useState(false);
   const [modalExcluir, setModalExcluir] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
+
+  // Controle de Inscrição do Usuário no Evento
+  const [isInscrito, setIsInscrito] = useState(false);
+  const [loadingInscricao, setLoadingInscricao] = useState(true);
+  const [inscrevendo, setInscrevendo] = useState(false);
+
+  // Modais de Ações da Barra
+  const [modalInscricao, setModalInscricao] = useState(false);
+  const [modalAcessoRestrito, setModalAcessoRestrito] = useState(false);
+  const [modalSubmissao, setModalSubmissao] = useState(false);
+  const [modalCredenciamento, setModalCredenciamento] = useState(false);
+  const [modalCertificado, setModalCertificado] = useState(false);
+  const [modalAnais, setModalAnais] = useState(false);
+
 
   useEffect(() => {
     async function carregarEvento() {
@@ -260,6 +299,7 @@ export default function EventoDetailsPage({
           organizacao: data.org || "",
           palestrantes: palestrantesFormatados,
           minicursos: minicursosFormatados,
+          programacao: data.programacao || [],
           lotes: data.lotes || [],
           patrocinadores: data.patrocinadores || [],
           apoiadores: data.apoiadores || [],
@@ -285,6 +325,153 @@ export default function EventoDetailsPage({
     (user.uid === evento.userId || (user.email && user.email === evento.promotorEmail))
   );
 
+  // Efeito para verificar inscrição do usuário logado neste evento
+  useEffect(() => {
+    async function verificarInscricao() {
+      if (!user || !id) {
+        setIsInscrito(false);
+        setLoadingInscricao(false);
+        return;
+      }
+      try {
+        setLoadingInscricao(true);
+        const { isInscrito: statusInscrito } = await verificarUsuarioInscritoNoEvento(
+          user,
+          id,
+          evento?.titulo
+        );
+        setIsInscrito(statusInscrito);
+      } catch (err) {
+        console.error("Erro ao verificar inscrição do participante:", err);
+        setIsInscrito(false);
+      } finally {
+        setLoadingInscricao(false);
+      }
+    }
+
+    if (evento) {
+      verificarInscricao();
+    }
+  }, [user, id, evento]);
+
+
+
+  const scrollToSection = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleBarAction = (acao: string) => {
+    const temAcesso = isInscrito || isOwner;
+
+    switch (acao) {
+      case "home":
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        break;
+      case "programacao":
+        scrollToSection("programacao");
+        break;
+      case "trabalhos":
+        if (!temAcesso) {
+          setModalAcessoRestrito(true);
+        } else {
+          setModalSubmissao(true);
+        }
+        break;
+      case "minicursos":
+        if (!temAcesso) {
+          setModalAcessoRestrito(true);
+        } else {
+          const el = document.getElementById("minicursos");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth" });
+          } else {
+            alert("Este evento não possui minicursos adicionais cadastrados no momento.");
+          }
+        }
+        break;
+      case "credenciamento":
+        if (!temAcesso) {
+          setModalAcessoRestrito(true);
+        } else {
+          setModalCredenciamento(true);
+        }
+        break;
+      case "certificado":
+        if (!temAcesso) {
+          setModalAcessoRestrito(true);
+        } else {
+          setModalCertificado(true);
+        }
+        break;
+      case "anais":
+        if (!temAcesso) {
+          setModalAcessoRestrito(true);
+        } else {
+          setModalAnais(true);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleInscreverEvento = async () => {
+    if (!user) {
+      router.push(`/login?redirect=/eventos/${id}`);
+      return;
+    }
+    try {
+      setInscrevendo(true);
+
+      // Garante recuperação do CPF do participante (de userData ou de users/{uid})
+      let userCpf = userData?.cpf || "";
+      if (!userCpf && user?.uid) {
+        try {
+          const userSnap = await getDoc(doc(db, "users", user.uid));
+          if (userSnap.exists()) {
+            userCpf = userSnap.data()?.cpf || "";
+          }
+        } catch (e) {
+          console.warn("Erro ao buscar CPF do usuário no Firestore:", e);
+        }
+      }
+
+      const novoIngresso = {
+        eventoId: id,
+        eventoTitulo: evento?.titulo || "Evento Científico",
+        categoria: evento?.categoria || "Geral",
+        data: evento?.data || "",
+        local: `${evento?.localNome || ""} • ${evento?.cidadeEstado || ""}`,
+        userId: user.uid,
+        userEmail: user.email || null,
+        userName: userData?.nome || user.displayName || "Participante",
+        cpf: userCpf || "",
+        userCpf: userCpf || "",
+        instituicao: userData?.instituicao || "",
+        curso: userData?.curso || "",
+        status: "Confirmada",
+        lote: evento?.lotes?.[0]?.perfil || "Inscrição Geral",
+        valor: evento?.lotes?.[0]?.preco || "Gratuito",
+        codigoIngresso: `CEOS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        createdAt: new Date().toISOString(),
+      };
+      await addDoc(collection(db, "inscricoes"), novoIngresso);
+      setIsInscrito(true);
+      setModalAcessoRestrito(false);
+      alert("Inscrição confirmada com sucesso! A barra do evento está totalmente liberada para você submeter trabalhos, credenciar-se e acessar os recursos exclusivos.");
+    } catch (err) {
+      console.error("Erro ao registrar inscrição:", err);
+      alert("Erro ao confirmar inscrição. Tente novamente.");
+    } finally {
+      setInscrevendo(false);
+    }
+  };
+
+
+
   const handleExcluirEvento = async () => {
     if (!evento) return;
     try {
@@ -309,7 +496,7 @@ export default function EventoDetailsPage({
           text: `${evento.titulo} - ${evento.cidadeEstado} (${evento.data})`,
           url: window.location.href,
         })
-        .catch(() => {});
+        .catch(() => { });
     } else {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
@@ -397,7 +584,7 @@ export default function EventoDetailsPage({
   return (
     <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] text-slate-900 dark:text-slate-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors fade-in">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
         {/* Breadcrumb e Ações Superiores */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <nav aria-label="Navegação estrutural" className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
@@ -461,8 +648,69 @@ export default function EventoDetailsPage({
           </div>
         )}
 
+        {/* Barra de Seleção e Navegação do Evento */}
+        <nav
+          aria-label="Menu do Evento"
+          className="w-full bg-[#0d2a54] dark:bg-[#071933] text-white rounded-xl shadow-md border border-blue-900/50 px-2 sm:px-4 py-1.5 sm:py-2 overflow-x-auto scrollbar-none"
+        >
+          <div className="w-full flex items-center justify-between min-w-max gap-2 sm:gap-4 md:gap-6">
+            <button
+              type="button"
+              onClick={() => handleBarAction("programacao")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center cursor-pointer whitespace-nowrap"
+            >
+              Programação
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBarAction("trabalhos")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="whitespace-nowrap">Submissão de Trabalhos</span>
+              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBarAction("minicursos")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="whitespace-nowrap">Inscrição em Minicursos</span>
+              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBarAction("credenciamento")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="whitespace-nowrap">Credenciamento</span>
+              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBarAction("certificado")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="whitespace-nowrap">Certificado</span>
+              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleBarAction("anais")}
+              className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="whitespace-nowrap">Anais</span>
+              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+            </button>
+          </div>
+        </nav>
+
         {/* Hero Banner do Evento com Imagem e Identificação */}
-        <section className="relative w-full rounded-3xl overflow-hidden border border-slate-200/90 dark:border-blue-900/40 bg-white dark:bg-[#0c1e33] shadow-lg">
+        <section id="hero" className="relative w-full rounded-3xl overflow-hidden border border-slate-200/90 dark:border-blue-900/40 bg-white dark:bg-[#0c1e33] shadow-lg">
           <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[420px] bg-slate-900">
             <Image
               src={evento.img}
@@ -546,12 +794,12 @@ export default function EventoDetailsPage({
 
         {/* Layout Principal de 2 Colunas com Espaço Amplo */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-          
+
           {/* =========================================================================
               COLUNA PRINCIPAL (ESQUERDA - 8 COLUNAS)
           ========================================================================== */}
           <div className="lg:col-span-8 space-y-8">
-            
+
             {/* 1. Mensagens da Organização (se houver) */}
             {evento.mensagens && evento.mensagens.length > 0 && (
               <div className="p-5 sm:p-6 rounded-3xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/50 space-y-3">
@@ -570,7 +818,7 @@ export default function EventoDetailsPage({
             )}
 
             {/* 2. Sobre o Evento */}
-            <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-5">
+            <section id="sobre" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                   <BookOpen className="w-5 h-5" />
@@ -628,7 +876,7 @@ export default function EventoDetailsPage({
 
             {/* 3. Palestrantes e Convidados de Honra */}
             {evento.palestrantes && evento.palestrantes.length > 0 && (
-              <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
+              <section id="programacao" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -700,7 +948,7 @@ export default function EventoDetailsPage({
 
             {/* 4. Minicursos e Atividades Associadas */}
             {evento.minicursos && evento.minicursos.length > 0 && (
-              <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
+              <section id="minicursos" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -784,52 +1032,137 @@ export default function EventoDetailsPage({
               </section>
             )}
 
+            {/* 4.5 Programação */}
+            {evento.programacao && evento.programacao.length > 0 && (
+              <section id="programacao-print-section" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
+                <style dangerouslySetInnerHTML={{__html: `
+                  @media print {
+                    body * {
+                      visibility: hidden;
+                    }
+                    #programacao-print-section, #programacao-print-section * {
+                      visibility: visible;
+                    }
+                    #programacao-print-section {
+                      position: absolute;
+                      left: 0;
+                      top: 0;
+                      width: 100%;
+                      padding: 0;
+                      border: none;
+                      box-shadow: none;
+                      background: white;
+                    }
+                    .print-hide {
+                      display: none !important;
+                    }
+                  }
+                `}} />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h2 className="font-montserrat text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Programação do Evento
+                  </h2>
+                  <button 
+                    type="button"
+                    onClick={() => window.print()}
+                    className="print-hide inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Imprimir Programação (PDF)
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {evento.programacao.map((dia, idx) => (
+                    <div key={idx} className="space-y-4">
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 border-b border-slate-100 dark:border-blue-900/30 pb-2">
+                        <Calendar className="w-4 h-4 text-blue-500" />
+                        {dia.data.split('-').reverse().join('/')}
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        {dia.atividades.map((ativ, aIdx) => (
+                          <div key={aIdx} className="p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50 dark:bg-[#071321] flex flex-col sm:flex-row gap-3 sm:items-center break-inside-avoid">
+                            <div className="shrink-0 sm:w-24 flex sm:flex-col items-center justify-center gap-1 sm:gap-0 py-1.5 px-3 rounded-lg bg-blue-100/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-bold text-xs sm:text-sm text-center">
+                              <span>{ativ.horaInicio}</span>
+                              <span className="text-[9px] text-blue-500/70 dark:text-blue-400/50 uppercase tracking-widest hidden sm:block">até</span>
+                              <span className="text-[10px] text-blue-500/70 sm:hidden">-</span>
+                              <span>{ativ.horaFim}</span>
+                            </div>
+                            
+                            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="space-y-0.5">
+                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">{ativ.titulo}</h4>
+                                {ativ.palestrante && (
+                                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-slate-400/70" /> {ativ.palestrante}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {ativ.local && (
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 bg-white dark:bg-[#0c1e33] px-2.5 py-1 rounded-md border border-slate-100 dark:border-blue-900/50">
+                                  <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                                  {ativ.local}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* 5. Patrocinadores e Apoiadores */}
             {((evento.patrocinadores && evento.patrocinadores.length > 0) ||
               (evento.apoiadores && evento.apoiadores.length > 0)) && (
-              <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
-                <h2 className="font-montserrat text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Realização & Parcerias
-                </h2>
+                <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
+                  <h2 className="font-montserrat text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Realização & Parcerias
+                  </h2>
 
-                {evento.patrocinadores && evento.patrocinadores.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Patrocínio Oficial
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-4">
-                      {evento.patrocinadores.map((logoUrl, idx) => (
-                        <div
-                          key={idx}
-                          className="relative w-28 h-16 rounded-xl bg-slate-50 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 p-2 flex items-center justify-center overflow-hidden"
-                        >
-                          <Image src={logoUrl} alt={`Patrocinador ${idx + 1}`} fill className="object-contain p-2" />
-                        </div>
-                      ))}
+                  {evento.patrocinadores && evento.patrocinadores.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Patrocínio Oficial
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-4">
+                        {evento.patrocinadores.map((logoUrl, idx) => (
+                          <div
+                            key={idx}
+                            className="relative w-28 h-16 rounded-xl bg-slate-50 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 p-2 flex items-center justify-center overflow-hidden"
+                          >
+                            <Image src={logoUrl} alt={`Patrocinador ${idx + 1}`} fill className="object-contain p-2" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {evento.apoiadores && evento.apoiadores.length > 0 && (
-                  <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-blue-900/40">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Apoio Institucional
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-4">
-                      {evento.apoiadores.map((logoUrl, idx) => (
-                        <div
-                          key={idx}
-                          className="relative w-24 h-14 rounded-xl bg-slate-50 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 p-2 flex items-center justify-center overflow-hidden"
-                        >
-                          <Image src={logoUrl} alt={`Apoiador ${idx + 1}`} fill className="object-contain p-2" />
-                        </div>
-                      ))}
+                  {evento.apoiadores && evento.apoiadores.length > 0 && (
+                    <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-blue-900/40">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Apoio Institucional
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-4">
+                        {evento.apoiadores.map((logoUrl, idx) => (
+                          <div
+                            key={idx}
+                            className="relative w-24 h-14 rounded-xl bg-slate-50 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 p-2 flex items-center justify-center overflow-hidden"
+                          >
+                            <Image src={logoUrl} alt={`Apoiador ${idx + 1}`} fill className="object-contain p-2" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </section>
-            )}
+                  )}
+                </section>
+              )}
 
           </div>
 
@@ -837,9 +1170,9 @@ export default function EventoDetailsPage({
               COLUNA LATERAL FIXA (DIREITA - 4 COLUNAS)
           ========================================================================== */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
-            
+
             {/* Card de Inscrição e Lotes */}
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/50 shadow-md space-y-5">
+            <div id="inscricao" className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/50 shadow-md space-y-5">
               <div className="space-y-1">
                 <span className="text-xs uppercase tracking-wider font-bold text-blue-600 dark:text-blue-400">
                   Participação & Inscrições
@@ -889,17 +1222,49 @@ export default function EventoDetailsPage({
 
               {/* Botão de Ação Principal e Status de Inscrição */}
               <div className="pt-2 space-y-3">
-                {evento.status === "Inscrições Abertas" ? (
-                  <a
-                    href={evento.site && evento.site !== "#" ? evento.site : "#"}
-                    target={evento.site && evento.site !== "#" ? "_blank" : undefined}
-                    rel="noopener noreferrer"
-                    className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Ticket className="w-5 h-5" />
-                    <span>Realizar Inscrição</span>
-                    <ExternalLink className="w-4 h-4 opacity-80" />
-                  </a>
+                {isInscrito ? (
+                  <div className="space-y-2">
+                    <div className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 select-none">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-200" />
+                      <span>Inscrição Confirmada</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModalCredenciamento(true)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-blue-900/60 bg-slate-50 dark:bg-[#071321] hover:bg-slate-100 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>Ver Credencial & QR Code</span>
+                    </button>
+                  </div>
+                ) : evento.status === "Inscrições Abertas" ? (
+                  evento.site && evento.site !== "#" ? (
+                    <a
+                      href={evento.site}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Ticket className="w-5 h-5" />
+                      <span>Realizar Inscrição</span>
+                      <ExternalLink className="w-4 h-4 opacity-80" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!user) {
+                          router.push(`/login?redirect=/eventos/${id}`);
+                          return;
+                        }
+                        setModalInscricao(true);
+                      }}
+                      className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-blue-600/25 hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Ticket className="w-5 h-5" />
+                      <span>Realizar Inscrição</span>
+                    </button>
+                  )
                 ) : evento.status === "Em Breve" ? (
                   <div className="space-y-2">
                     <button
@@ -1112,7 +1477,7 @@ export default function EventoDetailsPage({
 
         </div>
 
-        
+
 
       </div>
 
@@ -1168,7 +1533,218 @@ export default function EventoDetailsPage({
           </div>
         </div>
       )}
+      {/* Modal de Submissão de Trabalho Científico */}
+      <ModalSubmissaoTrabalho
+        isOpen={modalSubmissao}
+        onClose={() => setModalSubmissao(false)}
+        eventoId={id}
+        eventoTitulo={evento.titulo}
+        user={user}
+        userData={userData}
+      />
+
+      {/* Modal de Acesso Restrito a Não-Inscritos */}
+      {modalAcessoRestrito && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center shrink-0">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                  Acesso Exclusivo para Inscritos
+                </h3>
+                <p className="text-xs text-slate-500">Inscrição prévia necessária</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Para <strong>submeter trabalhos científicos</strong>, participar de minicursos, emitir credencial ou acessar anais e certificados, você precisa estar inscrito em <strong>&ldquo;{evento.titulo}&rdquo;</strong>.
+            </p>
+
+            <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-xs text-slate-700 dark:text-slate-300">
+              💡 Garanta sua inscrição agora para liberar imediatamente a submissão e todos os recursos da barra do evento.
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setModalAcessoRestrito(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 text-xs font-semibold cursor-pointer"
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setModalAcessoRestrito(false);
+                  if (!user) {
+                    router.push(`/login?redirect=/eventos/${id}`);
+                    return;
+                  }
+                  setModalInscricao(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+              >
+                <Ticket className="w-4 h-4" />
+                <span>Garantir Inscrição</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Credenciamento */}
+      {modalCredenciamento && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
+                    Credencial do Participante
+                  </h3>
+                  <p className="text-xs text-slate-500">Acesso oficial ao evento</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCredenciamento(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-blue-200/80 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/80 via-white to-slate-50 dark:from-[#071321] dark:via-[#0c1e33] dark:to-[#071321] space-y-4 text-center">
+              <div className="w-36 h-36 mx-auto bg-white p-3 rounded-2xl border border-slate-200 dark:border-blue-900/50 flex flex-col items-center justify-center shadow-sm">
+                <QrCode className="w-28 h-28 text-slate-900" />
+              </div>
+
+              <div>
+                <p className="font-montserrat font-bold text-slate-900 dark:text-white text-base">
+                  {userData?.nome || user?.displayName || user?.email || "Congressista Inscrito"}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-0.5">
+                  Participante Confirmado
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/60 dark:border-blue-900/40 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <p><strong>Evento:</strong> {evento.titulo}</p>
+                <p><strong>Local:</strong> {evento.localNome} • {evento.cidadeEstado}</p>
+                <p><strong>Data:</strong> {evento.data}</p>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Apresente o QR Code na recepção para retirada do crachá e kit oficial.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setModalCredenciamento(false)}
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs cursor-pointer transition-colors"
+            >
+              Fechar Credencial
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Certificados */}
+      {modalCertificado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+            <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
+                  Certificados Digitais
+                </h3>
+                <p className="text-xs text-slate-500">Autenticação oficial Céos System</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Os certificados de participação (<strong>{evento.cargaHoraria ? `${evento.cargaHoraria} Horas` : "Carga horária oficial"}</strong>) e de apresentação de trabalhos científicos são emitidos automaticamente após o encerramento do evento.
+            </p>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setModalCertificado(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 text-xs font-semibold cursor-pointer"
+              >
+                Fechar
+              </button>
+              <Link
+                href="/usuario/painel/certificados"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+              >
+                <span>Ver Meus Certificados</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Anais */}
+      {modalAnais && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+            <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
+                  Anais Científicos
+                </h3>
+                <p className="text-xs text-slate-500">Publicação com ISBN oficial</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Todos os trabalhos aprovados pela comissão examinadora deste evento serão publicados no livro oficial de Anais com indexação científica e registro DOI/ISBN após o evento.
+            </p>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setModalAnais(false)}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Completo de Inscrição com Seleção de Lotes e Pagamento Asaas */}
+      {evento && (
+        <ModalInscricaoEvento
+          isOpen={modalInscricao}
+          onClose={() => setModalInscricao(false)}
+          evento={evento}
+          user={user}
+          userData={userData}
+          onInscricaoSucesso={() => {
+            setIsInscrito(true);
+            setModalAcessoRestrito(false);
+          }}
+        />
+      )}
     </main>
-    
+
   );
 }

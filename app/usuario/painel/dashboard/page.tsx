@@ -19,12 +19,17 @@ import {
   BookOpen
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  buscarInscricoesDoUsuario,
+  buscarEventosInscritosDoUsuario,
+  EventoInscritoItem,
+} from "@/lib/inscricoes";
 
 export default function DashboardPage() {
   const { user, userData } = useAuth();
-  const [eventosRecentes, setEventosRecentes] = useState<any[]>([]);
+  const [eventosInscritos, setEventosInscritos] = useState<EventoInscritoItem[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
 
   // Métricas dinâmicas puxadas do banco de dados
@@ -46,7 +51,24 @@ export default function DashboardPage() {
       try {
         setLoadingEventos(true);
 
-        // 1. Eventos (se promotor, conta os eventos que ele criou)
+        // 1. Inscrições Reais e Eventos Individuais em que o Usuário está inscrito
+        try {
+          const [inscricoesReais, listaEventos] = await Promise.all([
+            buscarInscricoesDoUsuario(user),
+            buscarEventosInscritosDoUsuario(user),
+          ]);
+
+          setInscricoesCount(inscricoesReais.length);
+          setEventosInscritos(listaEventos);
+
+          if (!isPromotor) {
+            setMeusEventosCount(listaEventos.length);
+          }
+        } catch (e) {
+          console.error("Erro ao carregar inscrições/eventos do usuário:", e);
+        }
+
+        // Se for promotor, busca os eventos que ele criou
         if (isPromotor) {
           try {
             const qPromotor = query(
@@ -56,37 +78,11 @@ export default function DashboardPage() {
             const snapPromotor = await getDocs(qPromotor);
             setMeusEventosCount(snapPromotor.size);
           } catch (e) {
-            console.log("Erro contagem eventos promotor:", e);
+            console.error("Erro contagem eventos promotor:", e);
           }
         }
 
-        // 2. Inscrições Reais do Usuário no Firestore
-        try {
-          const qInscricoes = query(
-            collection(db, "inscricoes"),
-            where("userId", "==", user.uid)
-          );
-          const snapInsc = await getDocs(qInscricoes);
-          let totalInsc = snapInsc.size;
-
-          if (totalInsc === 0 && user.email) {
-            const qInscEmail = query(
-              collection(db, "inscricoes"),
-              where("userEmail", "==", user.email)
-            );
-            const snapInscEmail = await getDocs(qInscEmail);
-            totalInsc = snapInscEmail.size;
-          }
-
-          setInscricoesCount(totalInsc);
-          if (!isPromotor) {
-            setMeusEventosCount(totalInsc);
-          }
-        } catch (e) {
-          console.log("Erro contagem inscrições:", e);
-        }
-
-        // 3. Certificados Reais do Usuário no Firestore
+        // 2. Certificados Reais do Usuário no Firestore
         try {
           const qCertificados = query(
             collection(db, "certificados"),
@@ -109,7 +105,7 @@ export default function DashboardPage() {
           console.log("Erro contagem certificados:", e);
         }
 
-        // 4. Trabalhos Científicos Reais do Usuário no Firestore
+        // 3. Trabalhos Científicos Reais do Usuário no Firestore
         try {
           const qTrabalhos = query(
             collection(db, "trabalhos"),
@@ -131,15 +127,6 @@ export default function DashboardPage() {
         } catch (e) {
           console.log("Erro contagem trabalhos:", e);
         }
-
-        // 5. Carrega eventos gerais recentes
-        const qRecent = query(collection(db, "events"), limit(3));
-        const snapRecent = await getDocs(qRecent);
-        const docs = snapRecent.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setEventosRecentes(docs);
       } catch (error) {
         console.error("Erro ao carregar métricas reais do dashboard:", error);
       } finally {
@@ -268,18 +255,25 @@ export default function DashboardPage() {
         <div className="lg:col-span-8 space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-montserrat text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                Eventos em Destaque na Plataforma
+              <h2 className="font-montserrat text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                <span>{isPromotor ? "Eventos Gerenciados" : "Meus Eventos Inscritos"}</span>
+                {eventosInscritos.length > 0 && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300">
+                    {eventosInscritos.length}
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Congressos e jornadas científicas com inscrições ativas
+                {isPromotor
+                  ? "Congressos e eventos científicos sob sua coordenação"
+                  : "Eventos científicos em que você possui inscrição ativa nesta conta"}
               </p>
             </div>
             <Link
-              href="/eventos"
+              href={isPromotor ? "/usuario/painel/meus-eventos" : "/eventos"}
               className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
             >
-              <span>Ver todos</span>
+              <span>{isPromotor ? "Gerenciar todos" : "Ver todos os eventos"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -287,11 +281,11 @@ export default function DashboardPage() {
           {loadingEventos ? (
             <div className="p-8 text-center bg-white dark:bg-[#0c1e33] rounded-3xl border border-slate-200/90 dark:border-blue-900/40">
               <div className="w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Buscando eventos no banco de dados...</p>
+              <p className="text-xs text-slate-500">Verificando suas inscrições e eventos...</p>
             </div>
-          ) : eventosRecentes.length > 0 ? (
+          ) : eventosInscritos.length > 0 ? (
             <div className="space-y-3">
-              {eventosRecentes.map((ev) => (
+              {eventosInscritos.map((ev) => (
                 <div
                   key={ev.id}
                   className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:border-blue-400 dark:hover:border-blue-500 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
@@ -306,9 +300,20 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        {ev.category || "Geral"}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                          {ev.category || "Geral"}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          <span>Inscrição Confirmada</span>
+                        </span>
+                        {ev.inscricao?.lote && (
+                          <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 hidden sm:inline">
+                            • {ev.inscricao.lote}
+                          </span>
+                        )}
+                      </div>
                       <h3 className="font-montserrat font-bold text-sm text-slate-900 dark:text-white truncate">
                         {ev.title || "Evento Científico"}
                       </h3>
@@ -327,7 +332,7 @@ export default function DashboardPage() {
 
                   <Link
                     href={`/eventos/${ev.id}`}
-                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-600 dark:bg-blue-950/60 dark:hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-300 dark:hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-sm shadow-blue-600/20 flex items-center justify-center gap-1.5 shrink-0"
                   >
                     <span>Acessar Evento</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -336,8 +341,25 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center bg-white dark:bg-[#0c1e33] rounded-3xl border border-slate-200/90 dark:border-blue-900/40">
-              <p className="text-xs sm:text-sm text-slate-500">Nenhum evento registrado no momento.</p>
+            <div className="p-8 sm:p-10 text-center bg-white dark:bg-[#0c1e33] rounded-3xl border border-dashed border-slate-200 dark:border-blue-900/40 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-xs">
+                <Ticket className="w-6 h-6" />
+              </div>
+              <h3 className="font-montserrat font-bold text-slate-900 dark:text-white text-base">
+                Você ainda não está inscrito em nenhum evento
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                Conectado como <strong className="text-slate-700 dark:text-slate-300 font-semibold">{user?.email}</strong>. Quando você se inscrever ou sua conta for vinculada a um congresso, ele aparecerá aqui com acesso à submissão de trabalhos e certificados.
+              </p>
+              <div className="pt-2">
+                <Link
+                  href="/eventos"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/20"
+                >
+                  <span>Explorar Eventos Disponíveis</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           )}
         </div>
