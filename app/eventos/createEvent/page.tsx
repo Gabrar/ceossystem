@@ -7,7 +7,7 @@ import {
     ShieldAlert, ImagePlus, Trash2, Plus, MessageSquare, BookOpen, 
     Landmark, Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle, 
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map,
-    CalendarCheck, AlertCircle
+    CalendarCheck, AlertCircle, GripVertical
 } from "lucide-react";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -164,6 +164,17 @@ function CreateEventContent() {
         data: "",
         atividades: [{ id: Date.now(), horaInicio: "", horaFim: "", titulo: "", local: "", palestrante: "" }]
     }]);
+    const [draggedAtividadeIndex, setDraggedAtividadeIndex] = useState<{diaId: number, index: number} | null>(null);
+
+    const reorderAtividades = (diaId: number, startIndex: number, endIndex: number) => {
+        setProgramacao(prev => prev.map(d => {
+            if (d.id !== diaId) return d;
+            const result = Array.from(d.atividades);
+            const [removed] = result.splice(startIndex, 1);
+            result.splice(endIndex, 0, removed);
+            return { ...d, atividades: result };
+        }));
+    };
 
     // 12. Financeiro
     const [bancarioNaoSeAplica, setBancarioNaoSeAplica] = useState(false);
@@ -2170,40 +2181,58 @@ function CreateEventContent() {
 
                                                 <div className="space-y-3">
                                                     {dia.atividades.map((ativ, aIdx) => (
-                                                        <div key={ativ.id} className="bg-white dark:bg-[#071321] border border-slate-200 dark:border-blue-900/50 rounded-xl p-4 relative group">
+                                                        <div 
+                                                            key={ativ.id} 
+                                                            draggable
+                                                            onDragStart={() => setDraggedAtividadeIndex({ diaId: dia.id, index: aIdx })}
+                                                            onDragOver={(e) => e.preventDefault()}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                if (draggedAtividadeIndex && draggedAtividadeIndex.diaId === dia.id && draggedAtividadeIndex.index !== aIdx) {
+                                                                    reorderAtividades(dia.id, draggedAtividadeIndex.index, aIdx);
+                                                                }
+                                                            }}
+                                                            onDragEnd={() => setDraggedAtividadeIndex(null)}
+                                                            className={`bg-white dark:bg-[#071321] border border-slate-200 dark:border-blue-900/50 rounded-xl p-4 relative group transition-all duration-200 ${draggedAtividadeIndex?.diaId === dia.id && draggedAtividadeIndex?.index === aIdx ? 'opacity-40 scale-[0.98]' : 'opacity-100'}`}
+                                                        >
                                                             <button 
                                                                 type="button" 
                                                                 onClick={() => removeAtividadeProgramacao(dia.id, ativ.id)} 
-                                                                className="absolute top-3 right-3 p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
+                                                                className="absolute top-3 right-3 p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer z-10"
                                                                 title="Remover Atividade"
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </button>
 
-                                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                                                                <div className="sm:col-span-3 grid grid-cols-2 gap-2">
-                                                                    <div>
-                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Início</label>
-                                                                        <input type="time" value={ativ.horaInicio} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaInicio', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Fim</label>
-                                                                        <input type="time" value={ativ.horaFim} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaFim', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
-                                                                    </div>
+                                                            <div className="flex gap-2.5 sm:gap-4 items-center sm:items-start">
+                                                                <div className="flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 transition-colors h-full sm:pt-4">
+                                                                    <GripVertical className="w-5 h-5" />
                                                                 </div>
+                                                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-4">
+                                                                    <div className="sm:col-span-3 grid grid-cols-2 gap-2">
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Início</label>
+                                                                            <input type="time" value={ativ.horaInicio} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaInicio', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Fim</label>
+                                                                            <input type="time" value={ativ.horaFim} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'horaFim', e.target.value)} className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                        </div>
+                                                                    </div>
 
-                                                                <div className="sm:col-span-9 grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
-                                                                    <div className="sm:col-span-3">
-                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Título da Atividade</label>
-                                                                        <input type="text" placeholder="Ex: Credenciamento, Palestra Magna, etc." value={ativ.titulo} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'titulo', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
-                                                                    </div>
-                                                                    <div className="sm:col-span-2">
-                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Professor / Palestrante</label>
-                                                                        <input type="text" placeholder="Nome do responsável" value={ativ.palestrante} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'palestrante', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
-                                                                    </div>
-                                                                    <div className="sm:col-span-1">
-                                                                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Local</label>
-                                                                        <input type="text" placeholder="Ex: Auditório A" value={ativ.local} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'local', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                    <div className="sm:col-span-9 grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
+                                                                        <div className="sm:col-span-3">
+                                                                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Título da Atividade</label>
+                                                                            <input type="text" placeholder="Ex: Credenciamento, Palestra Magna, etc." value={ativ.titulo} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'titulo', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                        </div>
+                                                                        <div className="sm:col-span-2">
+                                                                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Professor / Palestrante</label>
+                                                                            <input type="text" placeholder="Nome do responsável" value={ativ.palestrante} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'palestrante', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                        </div>
+                                                                        <div className="sm:col-span-1">
+                                                                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Local</label>
+                                                                            <input type="text" placeholder="Ex: Auditório A" value={ativ.local} onChange={e => updateAtividadeProgramacao(dia.id, ativ.id, 'local', e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-blue-900/50 bg-slate-50 dark:bg-[#0c1e33] dark:text-white" />
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>

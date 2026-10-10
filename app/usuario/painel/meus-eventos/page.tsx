@@ -237,7 +237,7 @@ export default function MeusEventosPage() {
                         title="Ver métricas, inscrições e relatórios deste evento"
                       >
                         <BarChart3 className="w-3.5 h-3.5" />
-                        <span>Analytics</span>
+                        <span>Painel</span>
                       </Link>
 
                       <Link

@@ -45,6 +45,23 @@ export interface StatusDistribuicao {
   percentual: number;
 }
 
+export interface TrabalhoSubmetido {
+  id: string;
+  titulo: string;
+  eixoTematico: string;
+  autores: string;
+  status: string;
+  dataSubmissao: string;
+  nota?: string;
+  resumo?: string;
+  parecer?: string;
+  arquivoUrl?: string;
+  arquivoNome?: string;
+  arquivoTamanho?: string;
+  userId?: string;
+  userEmail?: string;
+}
+
 export interface EventoAnalyticsData {
   eventId: string;
   eventoTitulo: string;
@@ -65,6 +82,7 @@ export interface EventoAnalyticsData {
   distribuicaoLotes: LoteDistribuicao[];
   distribuicaoStatus: StatusDistribuicao[];
   participantes: ParticipanteInscrito[];
+  trabalhos: TrabalhoSubmetido[];
 }
 
 export interface EventoPromotorItem {
@@ -386,6 +404,44 @@ export async function buscarAnalyticsDoEvento(
 
   const ticketMedio = totalConfirmados > 0 ? totalReceita / totalConfirmados : 0;
 
+  // Busca Trabalhos Submetidos para o evento
+  const trabalhosMap = new Map<string, any>();
+  const trabalhosQueries = [
+    query(collection(db, "trabalhos"), where("eventoId", "==", eventId)),
+    query(collection(db, "trabalhos"), where("evento_id", "==", eventId)),
+    query(collection(db, "trabalhos"), where("eventId", "==", eventId))
+  ];
+
+  for (const q of trabalhosQueries) {
+    try {
+      const snap = await getDocs(q);
+      snap.docs.forEach((d) => {
+        if (!trabalhosMap.has(d.id)) {
+          trabalhosMap.set(d.id, d.data());
+        }
+      });
+    } catch (err) {
+      console.warn("Erro ao consultar variantes de trabalhos:", err);
+    }
+  }
+
+  const trabalhos: TrabalhoSubmetido[] = Array.from(trabalhosMap.entries()).map(([id, data]) => ({
+    id,
+    titulo: data.titulo || data.title || "Sem título informado",
+    eixoTematico: data.eixoTematico || data.area || "Geral",
+    autores: data.autores || data.authors || data.userName || "Autor Principal",
+    status: data.status || "Em Avaliação",
+    dataSubmissao: data.createdAt ? (typeof data.createdAt === "string" ? new Date(data.createdAt).toLocaleDateString("pt-BR") : (data.createdAt.toDate ? data.createdAt.toDate().toLocaleDateString("pt-BR") : "Data não informada")) : "Data não informada",
+    nota: data.nota || "-",
+    resumo: data.resumo || "",
+    parecer: data.parecer || "Trabalho submetido com sucesso. Aguardando parecer da comissão científica examinadora.",
+    arquivoUrl: data.arquivoUrl || data.pdfUrl || data.fileUrl || "",
+    arquivoNome: data.arquivoNome || data.pdfNome || data.fileName || "",
+    arquivoTamanho: data.arquivoTamanho || data.fileSize || "",
+    userId: data.userId || "",
+    userEmail: data.userEmail || "",
+  }));
+
   return {
     eventId,
     eventoTitulo,
@@ -406,6 +462,7 @@ export async function buscarAnalyticsDoEvento(
     distribuicaoLotes,
     distribuicaoStatus,
     participantes,
+    trabalhos,
   };
 }
 

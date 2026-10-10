@@ -115,6 +115,14 @@ export default function ModalInscricaoEvento({
   const [codigoDesconto, setCodigoDesconto] = useState("");
   const [termosAceitos, setTermosAceitos] = useState(false);
 
+  // Novos campos específicos por tipo de participante
+  const [grauAluno, setGrauAluno] = useState("");
+  const [qualificacaoProfessor, setQualificacaoProfessor] = useState("");
+  const [qualificacaoTecnico, setQualificacaoTecnico] = useState("");
+  const [descricaoPerfilOutro, setDescricaoPerfilOutro] = useState("");
+  const [desejoAvaliador, setDesejoAvaliador] = useState(false);
+  const [certificadoMatriculaNome, setCertificadoMatriculaNome] = useState<string | null>(null);
+
   // Estados de controle
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [submetendo, setSubmetendo] = useState(false);
@@ -261,6 +269,10 @@ export default function ModalInscricaoEvento({
         valorOriginal,
         valorFinal,
         codigoDesconto: cupomValido ? codigoDesconto : null,
+        grauAluno: tipoParticipante === "Aluno" ? grauAluno : undefined,
+        qualificacao: tipoParticipante === "Professor" ? qualificacaoProfessor : tipoParticipante === "TÉCNICO" ? qualificacaoTecnico : undefined,
+        descricaoPerfil: tipoParticipante === "OUTRO" ? descricaoPerfilOutro : undefined,
+        desejoAvaliador: (tipoParticipante === "Professor" || tipoParticipante === "TÉCNICO" || tipoParticipante === "PROFISSIONAL" || tipoParticipante === "ALUNO PÓS-GRADUAÇÃO" || tipoParticipante === "OUTRO") ? desejoAvaliador : false,
       };
 
       const res = await fetch("/api/asaas/criar-cobranca", {
@@ -601,7 +613,15 @@ export default function ModalInscricaoEvento({
             <select
               required
               value={tipoParticipante}
-              onChange={(e) => setTipoParticipante(e.target.value)}
+              onChange={(e) => {
+                setTipoParticipante(e.target.value);
+                // Reseta os campos específicos ao mudar de tipo
+                setGrauAluno("");
+                setQualificacaoProfessor("");
+                setQualificacaoTecnico("");
+                setDescricaoPerfilOutro("");
+                setDesejoAvaliador(false);
+              }}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               <option value="">Selecione</option>
@@ -613,25 +633,290 @@ export default function ModalInscricaoEvento({
             </select>
           </div>
 
-          {/* Área de Atuação (CNPq) */}
-          <div>
-            <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
-              Área de Atuação (CNPq)
-            </label>
-            <input
-              type="text"
-              list="areas-cnpq"
-              value={areaAtuacao}
-              onChange={(e) => setAreaAtuacao(e.target.value)}
-              placeholder="Selecione a área de atuação - digite para buscar"
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <datalist id="areas-cnpq">
-              {AREAS_CNPQ.map((a) => (
-                <option key={a} value={a} />
-              ))}
-            </datalist>
-          </div>
+          {/* Renderização Condicional Baseada no Tipo de Participante */}
+          {tipoParticipante === "Aluno" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Grau (Aluno)
+                </label>
+                <select
+                  required
+                  value={grauAluno}
+                  onChange={(e) => setGrauAluno(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">Selecione</option>
+                  <option value="GRADUAÇÃO">GRADUAÇÃO</option>
+                  <option value="PÓS-GRADUAÇÃO">PÓS-GRADUAÇÃO</option>
+                  <option value="ESPECIALISTA">ESPECIALISTA</option>
+                  <option value="MESTRANDO">MESTRANDO</option>
+                  <option value="DOUTORANDO">DOUTORANDO</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Certificado de Matrícula (obrigatório)
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-blue-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40 transition-colors whitespace-nowrap">
+                    <span>Escolher ficheiro</span>
+                    <input
+                      type="file"
+                      required
+                      accept=".pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setCertificadoMatriculaNome(e.target.files[0].name);
+                        }
+                      }}
+                    />
+                  </label>
+                  <span className="text-slate-500 truncate text-[11px] max-w-[120px]">
+                    {certificadoMatriculaNome || "Nenhum fi...selecionado"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-tight">
+                  Envie um PDF ou imagem do seu comprovante de matrícula.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {tipoParticipante === "ALUNO PÓS-GRADUAÇÃO" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Área de Atuação (CNPq)
+                </label>
+                <input
+                  type="text"
+                  list="areas-cnpq"
+                  required
+                  value={areaAtuacao}
+                  onChange={(e) => setAreaAtuacao(e.target.value)}
+                  placeholder="Selecione a área de atuação - digite para buscar"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Certificado de Matrícula (obrigatório)
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-blue-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-blue-900/40 transition-colors whitespace-nowrap">
+                    <span>Escolher ficheiro</span>
+                    <input
+                      type="file"
+                      required
+                      accept=".pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setCertificadoMatriculaNome(e.target.files[0].name);
+                        }
+                      }}
+                    />
+                  </label>
+                  <span className="text-slate-500 truncate text-[11px] max-w-[120px]">
+                    {certificadoMatriculaNome || "Nenhum fi...selecionado"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-tight">
+                  Envie um PDF ou imagem do seu comprovante de matrícula.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="desejo-avaliador-pos"
+                  checked={desejoAvaliador}
+                  onChange={(e) => setDesejoAvaliador(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="desejo-avaliador-pos" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Desejo atuar como avaliador
+                </label>
+              </div>
+            </div>
+          )}
+
+          {tipoParticipante === "Professor" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Área de Atuação (CNPq)
+                </label>
+                <input
+                  type="text"
+                  list="areas-cnpq"
+                  required
+                  value={areaAtuacao}
+                  onChange={(e) => setAreaAtuacao(e.target.value)}
+                  placeholder="Selecione a área de atuação - digite para buscar"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Qualificação (Professor)
+                </label>
+                <select
+                  required
+                  value={qualificacaoProfessor}
+                  onChange={(e) => setQualificacaoProfessor(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">Selecione</option>
+                  <option value="ESPECIALISTA">ESPECIALISTA</option>
+                  <option value="MESTRE">MESTRE</option>
+                  <option value="DOUTOR">DOUTOR</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="desejo-avaliador-prof"
+                  checked={desejoAvaliador}
+                  onChange={(e) => setDesejoAvaliador(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="desejo-avaliador-prof" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Desejo atuar como avaliador
+                </label>
+              </div>
+            </div>
+          )}
+
+          {tipoParticipante === "PROFISSIONAL" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Área de Atuação (CNPq)
+                </label>
+                <input
+                  type="text"
+                  list="areas-cnpq"
+                  required
+                  value={areaAtuacao}
+                  onChange={(e) => setAreaAtuacao(e.target.value)}
+                  placeholder="Selecione a área de atuação - digite para buscar"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="desejo-avaliador-profis"
+                  checked={desejoAvaliador}
+                  onChange={(e) => setDesejoAvaliador(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="desejo-avaliador-profis" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Desejo atuar como avaliador
+                </label>
+              </div>
+            </div>
+          )}
+
+          {tipoParticipante === "TÉCNICO" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Área de Atuação (CNPq)
+                </label>
+                <input
+                  type="text"
+                  list="areas-cnpq"
+                  required
+                  value={areaAtuacao}
+                  onChange={(e) => setAreaAtuacao(e.target.value)}
+                  placeholder="Selecione a área de atuação - digite para buscar"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Qualificação (Técnico)
+                </label>
+                <select
+                  required
+                  value={qualificacaoTecnico}
+                  onChange={(e) => setQualificacaoTecnico(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">Selecione</option>
+                  <option value="ESPECIALISTA">ESPECIALISTA</option>
+                  <option value="MESTRE">MESTRE</option>
+                  <option value="DOUTOR">DOUTOR</option>
+                  <option value="OUTRO">OUTRO</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="desejo-avaliador-tec"
+                  checked={desejoAvaliador}
+                  onChange={(e) => setDesejoAvaliador(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="desejo-avaliador-tec" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Desejo atuar como avaliador
+                </label>
+              </div>
+            </div>
+          )}
+
+          {tipoParticipante === "OUTRO" && (
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Área de Atuação (CNPq)
+                </label>
+                <input
+                  type="text"
+                  list="areas-cnpq"
+                  required
+                  value={areaAtuacao}
+                  onChange={(e) => setAreaAtuacao(e.target.value)}
+                  placeholder="Selecione a área de atuação - digite para buscar"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-slate-800 dark:text-slate-200">
+                  Descreva seu perfil
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={descricaoPerfilOutro}
+                  onChange={(e) => setDescricaoPerfilOutro(e.target.value)}
+                  placeholder="Digite aqui"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-blue-900/50 bg-white dark:bg-[#071321] focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="desejo-avaliador-outro"
+                  checked={desejoAvaliador}
+                  onChange={(e) => setDesejoAvaliador(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="desejo-avaliador-outro" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  Desejo atuar como avaliador
+                </label>
+              </div>
+            </div>
+          )}
+
+          <datalist id="areas-cnpq">
+            {AREAS_CNPQ.map((a) => (
+              <option key={a} value={a} />
+            ))}
+          </datalist>
 
           {/* Tipo de Ingresso / Lote */}
           <div>

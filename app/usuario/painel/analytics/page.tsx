@@ -10,6 +10,7 @@ import {
   buscarAnalyticsDoEvento,
   EventoAnalyticsData,
   EventoPromotorItem,
+  TrabalhoSubmetido,
 } from "@/lib/analytics";
 import {
   Loader2,
@@ -33,6 +34,9 @@ import {
   ExternalLink,
   Pencil,
   ShieldAlert,
+  FileText,
+  Eye,
+  BookOpen,
 } from "lucide-react";
 
 function AnalyticsContent() {
@@ -58,6 +62,9 @@ function AnalyticsContent() {
   const [filtroLote, setFiltroLote] = useState("Todos");
   const [filtroStatus, setFiltroStatus] = useState("Todos");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"analytics" | "trabalhos">("analytics");
+  const [trabalhoParecer, setTrabalhoParecer] = useState<TrabalhoSubmetido | null>(null);
 
   // 1. Carrega estritamente os eventos pertencentes ao promotor logado
   useEffect(() => {
@@ -422,7 +429,36 @@ function AnalyticsContent() {
             </div>
           </div>
 
-          {/* CARDS DE KPIS PRINCIPAIS */}
+          {/* TABS DE NAVEGAÇÃO DO PAINEL */}
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-blue-900/40 mb-6 px-2">
+            <button
+              onClick={() => setActiveTab("analytics")}
+              className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
+                activeTab === "analytics"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              Visão Geral & Inscritos
+            </button>
+            <button
+              onClick={() => setActiveTab("trabalhos")}
+              className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === "trabalhos"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              Trabalhos Submetidos
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                {analytics.trabalhos?.length || 0}
+              </span>
+            </button>
+          </div>
+
+          {activeTab === "analytics" ? (
+            <div className="space-y-6">
+              {/* CARDS DE KPIS PRINCIPAIS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 1. Total de Inscritos */}
             <div className="bg-white dark:bg-[#0c1e33] rounded-2xl p-5 border border-slate-200/90 dark:border-blue-900/40 shadow-2xs space-y-3">
@@ -843,6 +879,243 @@ function AnalyticsContent() {
               </table>
             </div>
           </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* CABEÇALHO DA ABA DE TRABALHOS */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+                <div>
+                  <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
+                    Gestão de Trabalhos Científicos
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Visualize os trabalhos submetidos e distribua-os para a banca avaliadora.
+                  </p>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => alert("Lógica de distribuição de trabalhos será implementada em breve.")}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm shadow-blue-600/20 transition-all cursor-pointer self-start sm:self-center"
+                  title="Distribuir trabalhos para os avaliadores"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Distribuir Trabalhos</span>
+                </button>
+              </div>
+
+              {/* LISTA DE TRABALHOS */}
+              {analytics.trabalhos && analytics.trabalhos.length > 0 ? (
+                analytics.trabalhos.map((trabalho) => (
+                  <div
+                    key={trabalho.id}
+                    className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6"
+                  >
+                    <div className="space-y-3 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            trabalho.status.includes("Aprovado")
+                              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
+                              : trabalho.status.includes("Corre") || trabalho.status.includes("Ressalva")
+                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40"
+                              : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40"
+                          }`}
+                        >
+                          {trabalho.status.includes("Aprovado") ? (
+                            <CheckCircle2 className="w-3 h-3" />
+                          ) : (
+                            <Clock className="w-3 h-3" />
+                          )}
+                          <span>{trabalho.status}</span>
+                        </span>
+
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                          {trabalho.eixoTematico}
+                        </span>
+
+                        <span className="text-xs text-slate-400 font-mono">
+                          ID: {trabalho.id}
+                        </span>
+                      </div>
+
+                      <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                        {trabalho.titulo}
+                      </h3>
+
+                      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <p>
+                          <strong className="text-slate-700 dark:text-slate-300">Autores: </strong>
+                          {trabalho.autores}
+                        </p>
+                        <p>
+                          Submetido em {trabalho.dataSubmissao}
+                          {trabalho.nota && trabalho.nota !== "-" && ` • Nota: ${trabalho.nota}`}
+                        </p>
+                      </div>
+
+                      {trabalho.arquivoUrl && (
+                        <div className="pt-1">
+                          <div className="inline-flex items-center gap-3 p-2.5 px-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-xs">
+                            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-[10px] uppercase shadow-xs shrink-0">
+                              PDF
+                            </div>
+                            <div className="min-w-0 pr-2">
+                              <p className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px] sm:max-w-xs">
+                                {trabalho.arquivoNome || "Artigo_Cientifico.pdf"}
+                              </p>
+                              {trabalho.arquivoTamanho && (
+                                <p className="text-[11px] text-slate-400">{trabalho.arquivoTamanho}</p>
+                              )}
+                            </div>
+                            <a
+                              href={trabalho.arquivoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-colors cursor-pointer shrink-0"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Visualizar PDF</span>
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-blue-900/30">
+                      {trabalho.arquivoUrl && (
+                        <a
+                          href={trabalho.arquivoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={trabalho.arquivoNome || "Trabalho_Cientifico.pdf"}
+                          className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Baixar PDF</span>
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setTrabalhoParecer(trabalho)}
+                        className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl border border-slate-200 dark:border-blue-900/50 hover:bg-slate-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+                      >
+                        Ver Parecer
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-12 text-center bg-white dark:bg-[#0c1e33] rounded-3xl border border-dashed border-slate-200 dark:border-blue-900/40 space-y-4 max-w-lg mx-auto mt-8">
+                  <div className="w-14 h-14 rounded-3xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto shadow-xs">
+                    <FileText className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h3 className="font-montserrat font-bold text-slate-900 dark:text-white text-base">
+                      Nenhum trabalho científico submetido
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      Este evento ainda não recebeu submissões de artigos ou resumos científicos.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Modal de Parecer */}
+          {trabalhoParecer && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+              <div className="w-full max-w-lg bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
+                        Parecer do Trabalho
+                      </h3>
+                      <p className="text-xs text-slate-500">ID: {trabalhoParecer.id}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTrabalhoParecer(null)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs sm:text-sm">
+                  <div>
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
+                      Título do Trabalho
+                    </span>
+                    <p className="font-bold text-slate-900 dark:text-white mt-0.5">
+                      {trabalhoParecer.titulo}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
+                        Status
+                      </span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                        {trabalhoParecer.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
+                        Nota Final
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {trabalhoParecer.nota || "Pendente"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
+                      Avaliação & Considerações da Comissão
+                    </span>
+                    <p className="mt-1 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-slate-700 dark:text-slate-300 leading-relaxed text-xs">
+                      {trabalhoParecer.parecer || "Nenhum parecer emitido até o momento. A comissão científica está em processo de avaliação."}
+                    </p>
+                  </div>
+
+                  {trabalhoParecer.arquivoUrl && (
+                    <div>
+                      <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold mb-1.5">
+                        Arquivo Submetido
+                      </span>
+                      <a
+                        href={trabalhoParecer.arquivoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200/70 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold text-xs hover:bg-rose-100 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Visualizar Arquivo PDF ({trabalhoParecer.arquivoNome || "artigo.pdf"})</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setTrabalhoParecer(null)}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : null}
     </div>
