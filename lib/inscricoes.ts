@@ -12,11 +12,13 @@ export interface InscricaoNormalizada {
   nome: string;
   cpf?: string;
   ticketId?: string;
+  codigoIngresso?: string;
   valor?: string;
   lote?: string;
   status: string;
   dataCompra?: string;
   instituicao?: string;
+  asaasInvoiceUrl?: string;
   raw?: any;
 }
 
@@ -143,6 +145,13 @@ export async function buscarInscricoesDoUsuario(user: {
       }
     }
 
+    const invoiceUrl =
+      data.asaasInvoiceUrl ||
+      data.checkoutUrl ||
+      data.bankInvoiceUrl ||
+      data.invoiceUrl ||
+      "";
+
     inscricoes.push({
       id: id,
       eventoId: eventoId,
@@ -153,11 +162,13 @@ export async function buscarInscricoesDoUsuario(user: {
       nome: data.nome || data.userName || user.displayName || "",
       cpf: data.cpf || data.documento_valor || "",
       ticketId: String(data.ticket_id || data.codigoIngresso || data.id || id),
+      codigoIngresso: String(data.codigoIngresso || data.ticket_id || data.id || id),
       valor: data.valor !== undefined && data.valor !== null ? String(data.valor) : "",
       lote: data.lote || data.perfil_tipo_participante || data.tipo_participante || "Inscrição Geral",
       status: data.status || "confirmado",
       dataCompra: dataCompraStr,
       instituicao: data.instituicao || "",
+      asaasInvoiceUrl: invoiceUrl,
       raw: data,
     });
   }
@@ -166,15 +177,20 @@ export async function buscarInscricoesDoUsuario(user: {
 }
 
 /**
- * Verifica se um usuário está inscrito em um evento específico.
+ * Verifica se um usuário está inscrito em um evento específico
+ * e se a inscrição está confirmada (paga/gratuita) ou pendente.
  */
 export async function verificarUsuarioInscritoNoEvento(
   user: { uid: string; email?: string | null; displayName?: string | null } | null,
   eventId: string,
   eventTitle?: string
-): Promise<{ isInscrito: boolean; inscricao?: InscricaoNormalizada }> {
+): Promise<{
+  isInscrito: boolean;
+  isConfirmado: boolean;
+  inscricao?: InscricaoNormalizada;
+}> {
   if (!user || !eventId) {
-    return { isInscrito: false };
+    return { isInscrito: false, isConfirmado: false };
   }
 
   const todasInscricoes = await buscarInscricoesDoUsuario(user);
@@ -188,10 +204,19 @@ export async function verificarUsuarioInscritoNoEvento(
   });
 
   if (match) {
-    return { isInscrito: true, inscricao: match };
+    const st = match.status?.toLowerCase() || "";
+    const isConfirmado =
+      st === "confirmada" ||
+      st === "confirmado" ||
+      st === "pago" ||
+      st === "received" ||
+      st === "confirmed" ||
+      st === "aprovado";
+
+    return { isInscrito: true, isConfirmado, inscricao: match };
   }
 
-  return { isInscrito: false };
+  return { isInscrito: false, isConfirmado: false };
 }
 
 /**

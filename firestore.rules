@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regra global de desenvolvimento (Caso queira liberar tudo durante testes):
+    // match /{document=**} {
+    //   allow read, write: if true;
+    // }
+
+    // 1. Coleção de Usuários
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 2. Subcontas Asaas dos Promotores
+    match /subcontas_asaas/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 3. Coleção de Eventos
+    match /events/{eventId} {
+      // Qualquer um pode visualizar eventos publicados
+      allow read: if true;
+      // Somente usuários autenticados (promotores) podem criar ou editar
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.promotorEmail == request.auth.token.email
+      );
+    }
+
+    // 4. Inscrições nos Eventos
+    match /inscricoes/{inscricaoId} {
+      // Leitura permitida para o próprio usuário inscrito ou para o promotor do evento
+      allow read: if request.auth != null;
+      // Criação de inscrições por participantes autenticados
+      allow create: if request.auth != null;
+      // Atualização permitida para o participante ou promotor
+      allow update, delete: if request.auth != null;
+    }
+
+    // 5. Certificados
+    match /certificados/{certificadoId} {
+      allow read: if true; // Permite validação pública de autenticidade
+      allow write: if request.auth != null;
+    }
+
+    // 6. Trabalhos Científicos
+    match /trabalhos/{trabalhoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}

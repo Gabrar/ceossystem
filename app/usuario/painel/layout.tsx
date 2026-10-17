@@ -10,18 +10,16 @@ import {
   Award,
   FileText,
   HelpCircle,
-  User as UserIcon,
   LogOut,
   ChevronRight,
   Menu,
   X,
-  Sparkles,
   ExternalLink,
   Plus,
   Shield,
   Loader2,
   Settings,
-  BarChart3,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -41,6 +39,13 @@ const menuItems = [
     href: "/usuario/painel/meus-eventos",
     icon: Calendar,
     description: "Eventos criados ou na agenda",
+  },
+  {
+    name: "Financeiro",
+    href: "/usuario/painel/financeiro",
+    icon: Wallet,
+    description: "Subconta Asaas, saldo e saques",
+    promotorOnly: true,
   },
   {
     name: "Inscrições",
@@ -74,11 +79,13 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
   const router = useRouter();
   const { user, userData, loading, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
-  // Fecha o menu mobile quando a rota mudar
-  useEffect(() => {
+  // Fecha o menu mobile quando a rota mudar (sem efeito colateral em cascata)
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   // Se não estiver logado após carregar, direciona para o login
   useEffect(() => {
@@ -221,9 +228,9 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
             Menu Principal
           </p>
 
-          {menuItems.map((item) => {
-
-
+          {menuItems
+            .filter((item) => !(item.promotorOnly && !isPromotor))
+            .map((item) => {
             const Icon = item.icon;
             const isActive =
               pathname === item.href ||

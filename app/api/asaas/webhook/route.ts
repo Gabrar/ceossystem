@@ -22,6 +22,30 @@ export async function POST(req: Request) {
     const payment = body?.payment ?? {};
     const paymentId: string = payment?.id ?? "";
     const externalReference: string = payment?.externalReference ?? "";
+    // 1. Tratamento de eventos de situação de conta e aprovação de documentos (KYC)
+    if (event.startsWith("ACCOUNT_STATUS_")) {
+      const accountId = body?.account?.id;
+      if (accountId) {
+        try {
+          const q = query(collection(db, "users"), where("asaasAccountId", "==", accountId));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const userDoc = snap.docs[0];
+            const documentationStatus = body?.accountStatus?.documentation;
+            const generalStatus = body?.accountStatus?.general;
+            await updateDoc(userDoc.ref, {
+              asaasDocumentStatus: documentationStatus || event,
+              asaasGeneralStatus: generalStatus || "APPROVED",
+              asaasStatusWebhookAt: new Date().toISOString(),
+            });
+            console.log(`Webhook Asaas: Subconta ${accountId} atualizada para ${documentationStatus || event}`);
+          }
+        } catch (e) {
+          console.warn("Aviso ao atualizar status de conta via webhook:", e);
+        }
+      }
+      return NextResponse.json({ received: true, type: "ACCOUNT_STATUS", event });
+    }
 
     if (!paymentId && !externalReference) {
       return NextResponse.json(

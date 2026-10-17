@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { criarOuBuscarClienteAsaas, criarCobrancaAsaas } from "@/lib/asaas";
+import { criarOuBuscarClienteAsaas, criarCobrancaAsaas, SplitItemAsaas } from "@/lib/asaas";
 
 export async function POST(req: Request) {
   try {
@@ -137,11 +137,44 @@ export async function POST(req: Request) {
 
     const docRef = await addDoc(collection(db, "inscricoes"), novaInscricaoPendente);
 
-    // 3. Integração com Asaas
-    const apiKey = process.env.ASAAS_API_KEY;
+    // 3. Identifica o Promotor do Evento e sua Subconta Asaas
+    let promotorUserId: string | null = null;
+    let subcontaApiKey: string | null = null;
+    let subcontaWalletId: string | null = null;
+    let subcontaAccountId: string | null = null;
 
-    if (!apiKey) {
-      // Se a chave não estiver no .env.local, avisa amigavelmente
+    try {
+      const eventDocSnap = await getDoc(doc(db, "events", eventoId));
+      if (eventDocSnap.exists()) {
+        const eventData = eventDocSnap.data();
+        promotorUserId = eventData.userId || null;
+
+        if (promotorUserId) {
+          const promotorSnap = await getDoc(doc(db, "users", promotorUserId));
+          if (promotorSnap.exists()) {
+            const pData = promotorSnap.data();
+            const subcontaValida =
+              pData.asaasStatus !== "ENCERRADA" &&
+              !pData.asaasContaEncerrada;
+
+            if (subcontaValida) {
+              subcontaApiKey = pData.asaasApiKey || null;
+              subcontaWalletId = pData.asaasWalletId || null;
+              subcontaAccountId = pData.asaasAccountId || null;
+            }
+          }
+        }
+      }
+    } catch (errBuscaPromotor) {
+      console.warn("Aviso ao buscar dados da subconta do promotor:", errBuscaPromotor);
+    }
+
+    // Determina qual chave Asaas utilizar:
+    // Se o promotor possuir subconta, usa a apiKey exclusiva dele.
+    // Senão, recorre à ASAAS_API_KEY da plataforma configurada no .env.local
+    const apiKeyFinal = subcontaApiKey || process.env.ASAAS_API_KEY;
+
+    if (!apiKeyFinal) {
       return NextResponse.json({
         success: true,
         gratuito: false,
@@ -149,39 +182,68 @@ export async function POST(req: Request) {
         inscricaoId: docRef.id,
         codigoIngresso,
         message:
-          "Inscrição registrada como Pendente. Para ativar o redirecionamento ao Asaas, configure a ASAAS_API_KEY no arquivo .env.local.",
+          "Inscrição registrada como Pendente. O promotor do evento ou a plataforma ainda não configuraram sua conta Asaas.",
       });
     }
 
     try {
-      // 3.1 Busca ou cria o cliente no Asaas
-      const clienteAsaasId = await criarOuBuscarClienteAsaas({
-        nome,
-        cpf,
-        email,
-        telefone,
-        cep,
-        endereco,
-        numero,
-        complemento,
-        bairro,
-      });
+      // 3.1 Busca ou cria o cliente pagador no Asaas (na conta-filha do promotor ou na principal)
+      const clienteAsaasId = await criarOuBuscarClienteAsaas(
+        {
+          nome,
+          cpf,
+          email,
+          telefone,
+          cep,
+          endereco,
+          numero,
+          complemento,
+          bairro,
+        },
+        apiKeyFinal
+      );
 
-      // 3.2 Cria a cobrança no Asaas com link de checkout
-      const cobranca = await criarCobrancaAsaas({
-        clienteId: clienteAsaasId,
-        valor: valorNumerico,
-        descricao: `Inscrição - ${eventoTitulo || "Evento"} - Lote: ${loteNome || "Padrão"}`,
-        inscricaoId: docRef.id,
-      });
+      // 3.2 Se a cobrança for emitida na subconta do promotor E a Céos System tiver taxa/split definida
+      let splitConfig: SplitItemAsaas[] | undefined = undefined;
+      const comissaoPercent = parseFloat(
+        String(process.env.CEOS_COMMISSION_PERCENTAGE || "0").replace("%", "").trim()
+      );
+      const walletIdMae = process.env.ASAAS_WALLET_ID;
 
-      // 3.3 Atualiza a inscrição no Firestore com os dados do Asaas
+      if (subcontaApiKey && walletIdMae && !isNaN(comissaoPercent) && comissaoPercent > 0) {
+        splitConfig = [
+          {
+            walletId: walletIdMae,
+            percentualValue: comissaoPercent,
+            description: `Comissão da Plataforma Céos System (${comissaoPercent}%)`,
+          },
+        ];
+      }
+
+      // 3.3 Cria a cobrança no Asaas com checkout seguro (Pix, Cartão, Boleto)
+      const cobranca = await criarCobrancaAsaas(
+        {
+          clienteId: clienteAsaasId,
+          valor: valorNumerico,
+          descricao: `Inscrição - ${eventoTitulo || "Evento"} - Lote: ${loteNome || "Padrão"}`,
+          inscricaoId: docRef.id,
+        },
+        apiKeyFinal,
+        splitConfig
+      );
+
+      // 3.4 Atualiza a inscrição no Firestore com os dados do Asaas
       await updateDoc(doc(db, "inscricoes", docRef.id), {
         asaasCustomerId: clienteAsaasId,
         asaasPaymentId: cobranca.id,
         asaasInvoiceUrl: cobranca.invoiceUrl,
         asaasDueDate: cobranca.dueDate,
         asaasStatus: cobranca.status,
+        promotorUserId: promotorUserId || null,
+        subcontaAccountId: subcontaAccountId || null,
+        subcontaWalletId: subcontaWalletId || null,
+        splitAtivo: Boolean(splitConfig && splitConfig.length > 0),
+        comissaoPercentual: splitConfig ? comissaoPercent : 0,
       });
 
       return NextResponse.json({
@@ -191,18 +253,20 @@ export async function POST(req: Request) {
         inscricaoId: docRef.id,
         paymentId: cobranca.id,
         codigoIngresso,
+        subcontaUtilizada: Boolean(subcontaAccountId),
       });
-    } catch (asaasErr: any) {
+    } catch (asaasErr: unknown) {
       console.error("Erro na chamada da API Asaas:", asaasErr);
+      const msg = asaasErr instanceof Error ? asaasErr.message : "Erro ao conectar com o gateway Asaas.";
       return NextResponse.json(
         {
-          error: asaasErr.message || "Erro ao conectar com o gateway Asaas.",
+          error: msg,
           inscricaoId: docRef.id,
         },
         { status: 502 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro interno ao processar inscrição:", error);
     return NextResponse.json(
       { error: "Erro interno no servidor ao processar sua inscrição." },

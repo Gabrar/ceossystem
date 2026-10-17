@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
-import { verificarUsuarioInscritoNoEvento } from "@/lib/inscricoes";
+import { verificarUsuarioInscritoNoEvento, InscricaoNormalizada } from "@/lib/inscricoes";
 import ModalInscricaoEvento from "@/components/ModalInscricaoEvento";
 import ModalSubmissaoTrabalho from "@/components/ModalSubmissaoTrabalho";
 import {
@@ -46,7 +46,9 @@ import {
   FileText,
   QrCode,
   X,
-  ArrowRight
+  ArrowRight,
+  CreditCard,
+  RefreshCw
 } from "lucide-react";
 
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -187,8 +189,11 @@ export default function EventoDetailsPage({
 
   // Controle de Inscrição do Usuário no Evento
   const [isInscrito, setIsInscrito] = useState(false);
+  const [isConfirmado, setIsConfirmado] = useState(false);
+  const [inscricaoUsuario, setInscricaoUsuario] = useState<InscricaoNormalizada | null>(null);
   const [loadingInscricao, setLoadingInscricao] = useState(true);
   const [inscrevendo, setInscrevendo] = useState(false);
+  const [verificandoPagamento, setVerificandoPagamento] = useState(false);
 
   // Modais de Ações da Barra
   const [modalInscricao, setModalInscricao] = useState(false);
@@ -326,35 +331,56 @@ export default function EventoDetailsPage({
   );
 
   // Efeito para verificar inscrição do usuário logado neste evento
-  useEffect(() => {
-    async function verificarInscricao() {
-      if (!user || !id) {
-        setIsInscrito(false);
-        setLoadingInscricao(false);
-        return;
-      }
-      try {
-        setLoadingInscricao(true);
-        const { isInscrito: statusInscrito } = await verificarUsuarioInscritoNoEvento(
-          user,
-          id,
-          evento?.titulo
-        );
-        setIsInscrito(statusInscrito);
-      } catch (err) {
-        console.error("Erro ao verificar inscrição do participante:", err);
-        setIsInscrito(false);
-      } finally {
-        setLoadingInscricao(false);
-      }
+  const verificarInscricao = async () => {
+    if (!user || !id) {
+      setIsInscrito(false);
+      setIsConfirmado(false);
+      setInscricaoUsuario(null);
+      setLoadingInscricao(false);
+      return;
     }
+    try {
+      setLoadingInscricao(true);
+      const res = await verificarUsuarioInscritoNoEvento(
+        user,
+        id,
+        evento?.titulo
+      );
+      let statusConfirmado = res.isConfirmado;
+      let inscricaoObj = res.inscricao || null;
 
+      // Se está inscrito porém pendente, faz uma checagem rápida em tempo real com a API do Asaas
+      if (res.isInscrito && !statusConfirmado && res.inscricao?.id) {
+        try {
+          const syncRes = await fetch(`/api/asaas/verificar-pagamento?inscricaoId=${res.inscricao.id}`);
+          const syncData = await syncRes.json();
+          if (syncData.status === "Confirmada") {
+            statusConfirmado = true;
+            if (inscricaoObj) inscricaoObj.status = "Confirmada";
+          }
+        } catch (errSync) {
+          console.warn("Aviso na checagem assíncrona do Asaas:", errSync);
+        }
+      }
+
+      setIsInscrito(res.isInscrito);
+      setIsConfirmado(statusConfirmado);
+      setInscricaoUsuario(inscricaoObj);
+    } catch (err) {
+      console.error("Erro ao verificar inscrição do participante:", err);
+      setIsInscrito(false);
+      setIsConfirmado(false);
+      setInscricaoUsuario(null);
+    } finally {
+      setLoadingInscricao(false);
+    }
+  };
+
+  useEffect(() => {
     if (evento) {
       verificarInscricao();
     }
-  }, [user, id, evento]);
-
-
+  }, [user, id, evento?.titulo]);
 
   const scrollToSection = (sectionId: string) => {
     const el = document.getElementById(sectionId);
@@ -364,7 +390,7 @@ export default function EventoDetailsPage({
   };
 
   const handleBarAction = (acao: string) => {
-    const temAcesso = isInscrito || isOwner;
+    const temAcesso = isConfirmado || isOwner;
 
     switch (acao) {
       case "home":
@@ -668,7 +694,7 @@ export default function EventoDetailsPage({
               className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span className="whitespace-nowrap">Submissão de Trabalhos</span>
-              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              {!(isConfirmado || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </button>
 
             <button
@@ -677,7 +703,7 @@ export default function EventoDetailsPage({
               className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span className="whitespace-nowrap">Inscrição em Minicursos</span>
-              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              {!(isConfirmado || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </button>
 
             <button
@@ -686,7 +712,7 @@ export default function EventoDetailsPage({
               className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span className="whitespace-nowrap">Credenciamento</span>
-              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              {!(isConfirmado || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </button>
 
             <button
@@ -695,7 +721,7 @@ export default function EventoDetailsPage({
               className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span className="whitespace-nowrap">Certificado</span>
-              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              {!(isConfirmado || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </button>
 
             <button
@@ -704,7 +730,7 @@ export default function EventoDetailsPage({
               className="flex-1 px-3 py-1.5 rounded-lg font-montserrat text-xs sm:text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span className="whitespace-nowrap">Anais</span>
-              {!(isInscrito || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              {!(isConfirmado || isOwner) && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </button>
           </div>
         </nav>
@@ -1222,7 +1248,7 @@ export default function EventoDetailsPage({
 
               {/* Botão de Ação Principal e Status de Inscrição */}
               <div className="pt-2 space-y-3">
-                {isInscrito ? (
+                {isConfirmado ? (
                   <div className="space-y-2">
                     <div className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 select-none">
                       <CheckCircle2 className="w-5 h-5 text-emerald-200" />
@@ -1236,6 +1262,70 @@ export default function EventoDetailsPage({
                       <QrCode className="w-4 h-4" />
                       <span>Ver Credencial & QR Code</span>
                     </button>
+                  </div>
+                ) : isInscrito ? (
+                  <div className="space-y-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase tracking-wider">
+                      <Clock className="w-4 h-4" />
+                      <span>Pagamento Pendente</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Sua inscrição foi pré-reservada ({inscricaoUsuario?.lote || "Lote selecionado"}). Conclua o pagamento para liberar sua credencial e a submissão de trabalhos.
+                    </p>
+                    {inscricaoUsuario?.asaasInvoiceUrl ? (
+                      <a
+                        href={inscricaoUsuario.asaasInvoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Efetuar Pagamento (Asaas)</span>
+                        <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setModalInscricao(true)}
+                        className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>Concluir Inscrição</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!inscricaoUsuario?.id) return;
+                        setVerificandoPagamento(true);
+                        try {
+                          const res = await fetch(`/api/asaas/verificar-pagamento?inscricaoId=${inscricaoUsuario.id}`);
+                          const data = await res.json();
+                          if (data.status === "Confirmada") {
+                            setIsConfirmado(true);
+                            alert("🎉 Pagamento confirmado com sucesso! Sua vaga e credencial estão 100% liberadas.");
+                          } else {
+                            alert("O Asaas ainda não identificou a compensação deste pagamento. Se pagou recentemente, aguarde alguns instantes e tente novamente.");
+                          }
+                        } catch {
+                          alert("Não foi possível consultar o Asaas no momento.");
+                        } finally {
+                          setVerificandoPagamento(false);
+                        }
+                      }}
+                      disabled={verificandoPagamento}
+                      className="w-full py-2.5 px-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${verificandoPagamento ? "animate-spin" : ""}`} />
+                      <span>{verificandoPagamento ? "Verificando no Asaas..." : "Já Paguei / Atualizar Status"}</span>
+                    </button>
+
+                    <Link
+                      href="/usuario/painel/inscricoes"
+                      className="block text-center text-[11px] text-slate-500 dark:text-slate-400 hover:underline"
+                    >
+                      Ver detalhes no Painel de Inscrições
+                    </Link>
                   </div>
                 ) : evento.status === "Inscrições Abertas" ? (
                   evento.site && evento.site !== "#" ? (
@@ -1553,18 +1643,28 @@ export default function EventoDetailsPage({
               </div>
               <div>
                 <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white">
-                  Acesso Exclusivo para Inscritos
+                  {isInscrito && !isConfirmado ? "Pagamento Pendente" : "Acesso Exclusivo para Inscritos"}
                 </h3>
-                <p className="text-xs text-slate-500">Inscrição prévia necessária</p>
+                <p className="text-xs text-slate-500">
+                  {isInscrito && !isConfirmado ? "Confirmação necessária" : "Inscrição prévia necessária"}
+                </p>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Para <strong>submeter trabalhos científicos</strong>, participar de minicursos, emitir credencial ou acessar anais e certificados, você precisa estar inscrito em <strong>&ldquo;{evento.titulo}&rdquo;</strong>.
+              {isInscrito && !isConfirmado ? (
+                <>Sua inscrição em <strong>&ldquo;{evento.titulo}&rdquo;</strong> foi registrada, mas seu pagamento ainda está pendente. Finalize o pagamento para liberar submissões, credenciais e certificados.</>
+              ) : (
+                <>Para <strong>submeter trabalhos científicos</strong>, participar de minicursos, emitir credencial ou acessar anais e certificados, você precisa estar inscrito em <strong>&ldquo;{evento.titulo}&rdquo;</strong>.</>
+              )}
             </p>
 
             <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-xs text-slate-700 dark:text-slate-300">
-              💡 Garanta sua inscrição agora para liberar imediatamente a submissão e todos os recursos da barra do evento.
+              {isInscrito && !isConfirmado ? (
+                <span>💡 Assim que o pagamento for confirmado no Asaas, todos os recursos da barra serão liberados automaticamente.</span>
+              ) : (
+                <span>💡 Garanta sua inscrição agora para liberar imediatamente a submissão e todos os recursos da barra do evento.</span>
+              )}
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -1576,21 +1676,34 @@ export default function EventoDetailsPage({
                 Fechar
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setModalAcessoRestrito(false);
-                  if (!user) {
-                    router.push(`/login?redirect=/eventos/${id}`);
-                    return;
-                  }
-                  setModalInscricao(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
-              >
-                <Ticket className="w-4 h-4" />
-                <span>Garantir Inscrição</span>
-              </button>
+              {isInscrito && !isConfirmado && inscricaoUsuario?.asaasInvoiceUrl ? (
+                <a
+                  href={inscricaoUsuario.asaasInvoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pagar Agora</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalAcessoRestrito(false);
+                    if (!user) {
+                      router.push(`/login?redirect=/eventos/${id}`);
+                      return;
+                    }
+                    setModalInscricao(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                >
+                  <Ticket className="w-4 h-4" />
+                  <span>Garantir Inscrição</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1739,7 +1852,7 @@ export default function EventoDetailsPage({
           user={user}
           userData={userData}
           onInscricaoSucesso={() => {
-            setIsInscrito(true);
+            verificarInscricao();
             setModalAcessoRestrito(false);
           }}
         />

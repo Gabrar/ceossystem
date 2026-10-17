@@ -14,7 +14,10 @@ import {
   ChevronRight,
   AlertCircle,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  CreditCard,
+  Lock,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
@@ -33,6 +36,7 @@ interface InscricaoItem {
   dataCompra?: string;
   codigoIngresso?: string;
   eventoId?: string;
+  asaasInvoiceUrl?: string;
 }
 
 export default function InscricoesPage() {
@@ -41,10 +45,10 @@ export default function InscricoesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<InscricaoItem | null>(null);
+  const [verificandoId, setVerificandoId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function carregarInscricoes() {
-      if (!user) return;
+  const carregarInscricoes = async () => {
+    if (!user) return;
       try {
         setLoading(true);
         setError(null);
@@ -94,9 +98,28 @@ export default function InscricoesPage() {
                   : `R$ ${Number(item.valor).toFixed(2).replace(".", ",")}`
               : "Gratuito";
 
-            const statusNorm = item.status?.toLowerCase() === "confirmado" || item.status?.toLowerCase() === "pago"
+            const stLower = item.status?.toLowerCase() || "";
+            const isPago =
+              stLower === "confirmada" ||
+              stLower === "confirmado" ||
+              stLower === "pago" ||
+              stLower === "received" ||
+              stLower === "confirmed" ||
+              stLower === "aprovado";
+
+            const statusNorm = isPago
               ? "Confirmada"
-              : item.status || "Confirmada";
+              : stLower === "cancelada" || stLower === "cancelado"
+              ? "Cancelada"
+              : "Pendente";
+
+            const invoiceUrl =
+              item.asaasInvoiceUrl ||
+              item.raw?.asaasInvoiceUrl ||
+              item.raw?.checkoutUrl ||
+              item.raw?.invoiceUrl ||
+              item.raw?.bankInvoiceUrl ||
+              "";
 
             return {
               id: item.id,
@@ -108,23 +131,67 @@ export default function InscricoesPage() {
               local: localEvento,
               status: statusNorm,
               dataCompra: item.dataCompra || "Recente",
-              codigoIngresso: item.ticketId || item.id,
+              codigoIngresso: item.codigoIngresso || item.ticketId || item.id,
               eventoId: item.eventoId,
+              asaasInvoiceUrl: invoiceUrl,
             };
           })
         );
 
         setInscricoes(docsEnriquecidos);
+
+        // Se houver qualquer inscrição pendente, dispara checagem assíncrona com o Asaas
+        const pendentes = docsEnriquecidos.filter((d) => d.status === "Pendente");
+        if (pendentes.length > 0) {
+          fetch("/api/asaas/verificar-pagamento")
+            .then((r) => r.json())
+            .then((resSync) => {
+              if (resSync.atualizadas && resSync.atualizadas > 0) {
+                buscarInscricoesDoUsuario(user).then((novas) => {
+                  setInscricoes((prev) =>
+                    prev.map((item) => {
+                      const updated = novas.find((n) => n.id === item.id);
+                      if (updated && (updated.status === "Confirmada" || updated.status === "confirmado")) {
+                        return { ...item, status: "Confirmada" };
+                      }
+                      return item;
+                    })
+                  );
+                });
+              }
+            })
+            .catch(() => {});
+        }
       } catch (err: any) {
         console.error("Erro ao buscar inscrições:", err);
         setError("Não foi possível carregar as inscrições do banco de dados.");
       } finally {
         setLoading(false);
       }
-    }
+    };
 
+  useEffect(() => {
     carregarInscricoes();
   }, [user]);
+
+  const handleVerificarPagamento = async (inscricaoId: string) => {
+    try {
+      setVerificandoId(inscricaoId);
+      const res = await fetch(`/api/asaas/verificar-pagamento?inscricaoId=${inscricaoId}`);
+      const data = await res.json();
+      if (data.status === "Confirmada") {
+        alert("🎉 Pagamento confirmado com sucesso no Asaas! Sua inscrição e credencial estão liberadas.");
+        await carregarInscricoes();
+      } else {
+        alert("O Asaas ainda não identificou a compensação deste pagamento. Se você pagou recentemente, aguarde alguns instantes e tente novamente.");
+      }
+    } catch (err) {
+      console.error("Erro ao verificar pagamento:", err);
+      alert("Não foi possível consultar o Asaas no momento. Tente novamente em instantes.");
+    } finally {
+      setVerificandoId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -159,10 +226,22 @@ export default function InscricoesPage() {
             >
               <div className="space-y-3 flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>{item.status}</span>
-                  </span>
+                  {item.status === "Confirmada" ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Confirmada</span>
+                    </span>
+                  ) : item.status === "Cancelada" ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40">
+                      <AlertCircle className="w-3 h-3" />
+                      <span>Cancelada</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+                      <Clock className="w-3 h-3 text-amber-500" />
+                      <span>Aguardando Pagamento</span>
+                    </span>
+                  )}
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30">
                     {item.categoria}
                   </span>
@@ -193,14 +272,52 @@ export default function InscricoesPage() {
 
               {/* Ações do Ingresso */}
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full lg:w-auto shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-blue-900/30">
-                <button
-                  type="button"
-                  onClick={() => setSelectedTicket(item)}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Ver Credencial</span>
-                </button>
+                {item.status === "Pendente" ? (
+                  <>
+                    {item.asaasInvoiceUrl && (
+                      <a
+                        href={item.asaasInvoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Pagar Inscrição</span>
+                        <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                      </a>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleVerificarPagamento(item.id)}
+                      disabled={verificandoId === item.id}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold transition-all cursor-pointer"
+                      title="Clique para checar a compensação no Asaas agora"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${verificandoId === item.id ? "animate-spin" : ""}`} />
+                      <span>{verificandoId === item.id ? "Verificando..." : "Já Paguei"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled
+                      title="Disponível após a confirmação do pagamento"
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/70 text-slate-400 dark:text-slate-500 text-xs font-semibold cursor-not-allowed border border-slate-200/50 dark:border-slate-700/50"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Credencial Bloqueada</span>
+                    </button>
+                  </>
+                ) : item.status === "Confirmada" ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTicket(item)}
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Ver Credencial</span>
+                  </button>
+                ) : null}
 
                 {item.eventoId && (
                   <Link
