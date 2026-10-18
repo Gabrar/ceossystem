@@ -8,11 +8,12 @@ export const getAsaasBaseUrl = () => {
   if (env === "production" || env === "prod") {
     return "https://api.asaas.com/v3";
   }
-  return "https://sandbox.asaas.com/v3";
+  return "https://api-sandbox.asaas.com/v3";
 };
 
 export const getAsaasHeaders = (customApiKey?: string) => {
-  const apiKey = customApiKey || process.env.ASAAS_API_KEY || "";
+  let apiKey = customApiKey || process.env.ASAAS_API_KEY || "";
+  apiKey = apiKey.trim().replace(/^[\/\\]+/, "").replace(/^["']|["']$/g, "").trim();
   return {
     "Content-Type": "application/json",
     access_token: apiKey,
@@ -185,7 +186,8 @@ export async function consultarSubcontaAsaas(subcontaId: string) {
       return { notFound: true, status: "ENCERRADA" };
     }
     const errBody = await res.json().catch(() => ({}));
-    return { error: true, status: "INACTIVE", errBody };
+    console.warn(`[consultarSubcontaAsaas] Resposta de erro da API Asaas (${res.status}):`, errBody);
+    return { error: true, httpStatus: res.status, errBody };
   } catch (e) {
     console.error(`Erro ao consultar subconta ${subcontaId}:`, e);
   }
@@ -241,6 +243,53 @@ export async function consultarDocumentosSubcontaAsaas(subcontaApiKey: string) {
     console.error("Erro ao consultar documentos da subconta Asaas:", e);
   }
   return null;
+}
+
+/**
+ * Envia um arquivo de documento ou selfie diretamente para a API do Asaas
+ */
+export async function enviarDocumentoSubcontaAsaas(
+  subcontaApiKey: string,
+  documentId: string,
+  type: string,
+  file: File | Blob,
+  filename?: string
+) {
+  if (!subcontaApiKey || !documentId || !file) {
+    throw new Error("Parâmetros incompletos para envio de documento.");
+  }
+
+  const baseUrl = getAsaasBaseUrl();
+  const headers = getAsaasHeaders(subcontaApiKey);
+  delete (headers as any)["Content-Type"];
+
+  const formData = new FormData();
+  formData.append("type", type);
+  formData.append(
+    "documentFile",
+    file,
+    filename || (file instanceof File ? file.name : "documento.jpg")
+  );
+
+  const res = await fetch(`${baseUrl}/myAccount/documents/${documentId}`, {
+    method: "POST",
+    headers: {
+      ...headers,
+      "User-Agent": "CeosSystem/1.0",
+    },
+    body: formData,
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg =
+      json.errors?.[0]?.description ||
+      json.message ||
+      "Erro ao enviar documento para o Asaas.";
+    throw new Error(msg);
+  }
+
+  return json;
 }
 
 /**
@@ -496,8 +545,8 @@ export async function listarChavesPixSubconta(subcontaApiKey: string) {
       const json = await res.json();
       return json.data || [];
     }
-    const err = await res.json();
-    throw new Error(err.errors?.[0]?.description || "Erro ao listar chaves Pix.");
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.errors?.[0]?.description || err.message || "Erro ao listar chaves Pix.");
   } catch (e: any) {
     console.error("Erro ao listar chaves Pix Asaas:", e);
     throw e;

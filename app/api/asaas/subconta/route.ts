@@ -60,13 +60,13 @@ export async function GET(req: Request) {
       console.warn("Aviso ao buscar dados em tempo real no Asaas:", e);
     }
 
+    // Uma subconta só é considerada encerrada se a API do Asaas explicitamente retornar 404 (notFound)
+    // ou status DISABLED/CLOSED/ENCERRADA. Erros de rede ou 401 de chave mestra NÃO devem encerrar a conta.
     const contaEncerradaOuInvalida = Boolean(
       dadosAsaas?.notFound ||
       dadosAsaas?.status === "ENCERRADA" ||
-      dadosAsaas?.status === "INACTIVE" ||
       dadosAsaas?.status === "DISABLED" ||
-      dadosAsaas?.status === "CLOSED" ||
-      saldo?.unauthorized
+      dadosAsaas?.status === "CLOSED"
     );
 
     if (contaEncerradaOuInvalida) {
@@ -93,6 +93,25 @@ export async function GET(req: Request) {
       });
     }
 
+    // Se a subconta está confirmada no Asaas mas estava com flag falso-positivo de encerrada no Firestore, auto-restaura
+    if (userData.asaasContaEncerrada || userData.asaasStatus === "ENCERRADA") {
+      try {
+        await updateDoc(userDocRef, {
+          asaasStatus: "ACTIVE",
+          asaasContaEncerrada: false,
+          asaasContaEncerradaEm: null,
+        });
+        const subcontaDocRef = doc(db, "subcontas_asaas", userId);
+        await updateDoc(subcontaDocRef, {
+          asaasStatus: "ACTIVE",
+          asaasContaEncerrada: false,
+          asaasContaEncerradaEm: null,
+        }).catch(() => {});
+      } catch (errRestaurar) {
+        console.warn("Aviso ao auto-restaurar subconta no Firestore:", errRestaurar);
+      }
+    }
+
     const listaDocs = documentosAsaas?.data || [];
     const docComOnboarding = listaDocs.find((d: any) => d.onboardingUrl) || null;
     const onboardingUrl = docComOnboarding?.onboardingUrl || documentosAsaas?.onboardingUrl || null;
@@ -115,7 +134,7 @@ export async function GET(req: Request) {
       exists: true,
       accountId: asaasAccountId,
       walletId: asaasWalletId,
-      status: dadosAsaas?.status || userData.asaasStatus || "ACTIVE",
+      status: "ACTIVE",
       contaEncerrada: false,
       accountNumber: userData.asaasAccountNumber || dadosAsaas?.accountNumber || null,
       saldo: saldo || { balance: 0, paymentInProgressValue: 0 },
