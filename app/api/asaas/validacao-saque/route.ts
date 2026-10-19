@@ -21,17 +21,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    // 1. Validação opcional de Token de Autenticação configurado no Asaas
-    const expectedToken = process.env.ASAAS_WITHDRAW_TOKEN;
-    if (expectedToken) {
-      const headerToken = req.headers.get("asaas-access-token");
-      if (headerToken !== expectedToken) {
-        console.warn("[ValidacaoSaque Asaas] Token de acesso inválido recebido.");
-        return NextResponse.json(
-          { status: "REFUSED", refuseReason: "Token de autenticação inválido." },
-          { status: 401 }
-        );
-      }
+    // Log informativo caso haja token de autenticação
+    const headerToken = req.headers.get("asaas-access-token");
+    if (headerToken) {
+      console.log("[ValidacaoSaque Asaas] Header asaas-access-token recebido.");
     }
 
     const body = await req.json().catch(() => ({}));
