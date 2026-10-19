@@ -774,6 +774,13 @@ export default function FinanceiroPage() {
                   <span>ID Asaas: <code className="text-blue-600 dark:text-blue-400 font-mono">{subconta.accountId}</code></span>
                   <span>•</span>
                   <span>Documento: <code className="font-mono">{subconta.dadosCadastrais?.cpfCnpj || userData?.documento}</code></span>
+                  <span>•</span>
+                  <span>
+                    Taxa Céos:{" "}
+                    <strong className="text-amber-600 dark:text-amber-400">
+                      {userData?.taxaCeos ? `${userData.taxaCeos}% (Negociada)` : "8% (Padrão)"}
+                    </strong>
+                  </span>
                 </p>
               </div>
             </div>

@@ -5,6 +5,8 @@ import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
+import { verificarSeEAdmin } from "@/lib/admin";
+
 interface AuthContextType {
   user: User | null;
   userData: any | null;
@@ -32,11 +34,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setUserData(docSnap.data());
-          } else {
-            setUserData(null);
+          let currentData = docSnap.exists() ? docSnap.data() : {};
+
+          // Valida se o usuário é Administrador na pasta /admins
+          try {
+            const adminProfile = await verificarSeEAdmin(currentUser.uid, currentUser.email);
+            if (adminProfile) {
+              currentData = {
+                ...currentData,
+                ...adminProfile,
+                isAdmin: true,
+                role: adminProfile.role || "dono",
+              };
+            }
+          } catch (e) {
+            console.error("Erro ao checar admin na pasta /admins:", e);
           }
+
+          setUserData(Object.keys(currentData).length > 0 ? currentData : null);
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
           setUserData(null);

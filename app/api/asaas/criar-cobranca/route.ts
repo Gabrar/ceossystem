@@ -142,6 +142,8 @@ export async function POST(req: Request) {
     let subcontaApiKey: string | null = null;
     let subcontaWalletId: string | null = null;
     let subcontaAccountId: string | null = null;
+    let eventTaxaCeos: number | null = null;
+    let promotorTaxaCeos: number | null = null;
 
     try {
       const eventDocSnap = await getDoc(doc(db, "events", eventoId));
@@ -149,10 +151,21 @@ export async function POST(req: Request) {
         const eventData = eventDocSnap.data();
         promotorUserId = eventData.userId || null;
 
+        // Se o evento possui taxa negociada específica pelo dono (ex: 5%, 6%, etc.)
+        if (eventData.taxaCeos !== undefined && eventData.taxaCeos !== null && !isNaN(Number(eventData.taxaCeos))) {
+          eventTaxaCeos = Number(eventData.taxaCeos);
+        }
+
         if (promotorUserId) {
           const promotorSnap = await getDoc(doc(db, "users", promotorUserId));
           if (promotorSnap.exists()) {
             const pData = promotorSnap.data();
+
+            // Lê a taxa negociada salva no perfil do promotor (ex: 6%)
+            if (pData.taxaCeos !== undefined && pData.taxaCeos !== null && !isNaN(Number(pData.taxaCeos))) {
+              promotorTaxaCeos = Number(pData.taxaCeos);
+            }
+
             const subcontaValida =
               pData.asaasStatus !== "ENCERRADA" &&
               !pData.asaasContaEncerrada;
@@ -204,13 +217,25 @@ export async function POST(req: Request) {
       );
 
       // 3.2 Se a cobrança for emitida na subconta do promotor E a Céos System tiver taxa/split definida
+      // Hierarquia estrita de taxas negociadas:
+      // 1) Taxa customizada no próprio evento (eventTaxaCeos)
+      // 2) Taxa negociada no perfil do promotor (promotorTaxaCeos)
+      // 3) Env CEOS_COMMISSION_PERCENTAGE
+      // 4) Fallback padrão Céos: 8%
+      let comissaoPercent = 8;
+      if (eventTaxaCeos !== null) {
+        comissaoPercent = eventTaxaCeos;
+      } else if (promotorTaxaCeos !== null) {
+        comissaoPercent = promotorTaxaCeos;
+      } else if (process.env.CEOS_COMMISSION_PERCENTAGE) {
+        const parsed = parseFloat(String(process.env.CEOS_COMMISSION_PERCENTAGE).replace("%", "").trim());
+        if (!isNaN(parsed)) comissaoPercent = parsed;
+      }
+
       let splitConfig: SplitItemAsaas[] | undefined = undefined;
-      const comissaoPercent = parseFloat(
-        String(process.env.CEOS_COMMISSION_PERCENTAGE || "0").replace("%", "").trim()
-      );
       const walletIdMae = process.env.ASAAS_WALLET_ID;
 
-      if (subcontaApiKey && walletIdMae && !isNaN(comissaoPercent) && comissaoPercent > 0) {
+      if (subcontaApiKey && walletIdMae && comissaoPercent > 0) {
         splitConfig = [
           {
             walletId: walletIdMae,
@@ -232,7 +257,11 @@ export async function POST(req: Request) {
         splitConfig
       );
 
-      // 3.4 Atualiza a inscrição no Firestore com os dados do Asaas
+      // 3.4 Calcula valores retidos e repasse do promotor
+      const valorComissaoCeos = Number(((valorNumerico * comissaoPercent) / 100).toFixed(2));
+      const valorLiquidoPromotor = Number((valorNumerico - valorComissaoCeos).toFixed(2));
+
+      // Atualiza a inscrição no Firestore com os dados do Asaas e comissão da Céos
       await updateDoc(doc(db, "inscricoes", docRef.id), {
         asaasCustomerId: clienteAsaasId,
         asaasPaymentId: cobranca.id,
@@ -243,6 +272,9 @@ export async function POST(req: Request) {
         subcontaAccountId: subcontaAccountId || null,
         subcontaWalletId: subcontaWalletId || null,
         splitAtivo: Boolean(splitConfig && splitConfig.length > 0),
+        taxaCeosPercentual: comissaoPercent,
+        valorComissaoCeos,
+        valorLiquidoPromotor,
         comissaoPercentual: splitConfig ? comissaoPercent : 0,
       });
 

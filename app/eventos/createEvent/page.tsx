@@ -663,8 +663,15 @@ function CreateEventContent() {
                 alert("Evento atualizado com sucesso!");
                 router.push(`/eventos/${editId}`);
             } else {
+                // Ao criar novo evento, herda automaticamente a taxa Céos negociada do perfil do promotor ou o padrão (8%)
+                const taxaCeosHerdada =
+                    userData?.taxaCeos !== undefined && userData?.taxaCeos !== null && !isNaN(Number(userData.taxaCeos))
+                        ? Number(userData.taxaCeos)
+                        : 8;
+
                 await addDoc(collection(db, "events"), {
                     ...eventoObj,
+                    taxaCeos: taxaCeosHerdada,
                     createdAt: new Date().toISOString()
                 });
                 alert("Evento publicado com sucesso!");

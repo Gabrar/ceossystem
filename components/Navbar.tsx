@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { LogIn, UserPlus, User, LayoutDashboard, Calendar, Settings, LogOut, ChevronDown } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { LogIn, UserPlus, User, LayoutDashboard, Calendar, Settings, LogOut, ChevronDown, Shield } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Navbar() {
+    const pathname = usePathname();
     const [isVisible, setIsVisible] = useState(true);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const lastScrollY = useRef(0);
@@ -47,6 +49,11 @@ export default function Navbar() {
         }
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [dropdownOpen]);
+
+    // Oculta a Navbar pública nas rotas de administração (/admin)
+    if (pathname?.startsWith("/admin")) {
+        return null;
+    }
 
     return (
         <nav 
@@ -146,6 +153,16 @@ export default function Navbar() {
                                     <Settings className="w-4 h-4" />
                                     <span>Meu Perfil</span>
                                 </Link>
+                                {(userData?.isAdmin || userData?.role === "admin" || userData?.role === "dono") && (
+                                    <Link 
+                                        href="/admin/dashboard" 
+                                        onClick={() => setDropdownOpen(false)}
+                                        className="flex items-center gap-2 px-4 py-2.5 text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                        <span>Painel do Dono</span>
+                                    </Link>
+                                )}
                                 <div className="h-px bg-slate-200 dark:bg-blue-900/40 my-1" />
                                 <button
                                     onClick={() => {
