@@ -35,6 +35,10 @@ import {
   History,
   Plus,
   Upload,
+  Mail,
+  HelpCircle,
+  Info,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -844,7 +848,7 @@ export default function FinanceiroPage() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Para cumprir a regulação do Banco Central e liberar transferências e Pix na subconta, conclua a validação de segurança diretamente pelo Céos (sem precisar acessar o Asaas).
+                      Para cumprir as normas do Banco Central e liberar saques e transferências Pix, conclua a validação de identidade (documento e selfie) na sua conta Asaas através do link enviado ao seu e-mail.
                     </p>
                   </div>
                 </div>
@@ -854,8 +858,8 @@ export default function FinanceiroPage() {
                   onClick={() => setModalValidacaoAberto(true)}
                   className="self-start md:self-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
                 >
-                  <Camera className="w-4 h-4" />
-                  <span>Concluir Validação no Céos</span>
+                  <HelpCircle className="w-4 h-4" />
+                  <span>Ver Como Validar no Asaas</span>
                 </button>
               </div>
 
@@ -864,13 +868,13 @@ export default function FinanceiroPage() {
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="p-1.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      <Smartphone className="w-4 h-4" />
+                      <Mail className="w-4 h-4" />
                     </span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Etapa 1</span>
                   </div>
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-white mt-1">Confirmação SMS</h4>
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-white mt-1">Ativação por E-mail</h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Código de 6 dígitos enviado para seu telefone cadastrado.
+                    Acesse o link enviado pelo Asaas e crie sua senha de segurança.
                   </p>
                 </div>
 
@@ -1149,8 +1153,8 @@ export default function FinanceiroPage() {
                     onClick={() => setModalValidacaoAberto(true)}
                     className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md shadow-amber-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all self-start md:self-auto"
                   >
-                    <QrCode className="w-4 h-4" />
-                    <span>Validar Identidade (QR Code)</span>
+                    <HelpCircle className="w-4 h-4" />
+                    <span>Como Validar Conta (Passo a Passo)</span>
                   </button>
                 </div>
               )}
@@ -1536,6 +1540,31 @@ export default function FinanceiroPage() {
               </p>
             </div>
 
+            {/* INFORMATIVO SOBRE SENHA E VALIDAÇÃO (OPÇÃO 3) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 space-y-2.5">
+              <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-bold text-xs sm:text-sm">
+                <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Importante: Ativação por E-mail e Criação de Senha</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Por exigência regulatória do <strong>Banco Central</strong>, a senha da sua conta financeira deve ser criada diretamente por você com sigilo absoluto. Ao cadastrar sua conta:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px] text-slate-700 dark:text-slate-300">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#071321] border border-blue-100 dark:border-blue-900/30 space-y-1">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 block">1. E-mail de Ativação</span>
+                  <span>O Asaas enviará um link seguro <strong>(válido por 10 minutos)</strong> para o e-mail informado abaixo.</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#071321] border border-blue-100 dark:border-blue-900/30 space-y-1">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 block">2. Criação de Senha</span>
+                  <span>Você acessa o link e cadastra a sua senha bancária pessoal.</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#071321] border border-blue-100 dark:border-blue-900/30 space-y-1">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 block">3. Validação Facial</span>
+                  <span>Envie documento e selfie no Asaas para liberar saques Pix.</span>
+                </div>
+              </div>
+            </div>
+
             {/* SELETOR: PESSOA FÍSICA OU JURÍDICA */}
             <div className="grid grid-cols-2 gap-3 max-w-md">
               <button
@@ -1599,6 +1628,9 @@ export default function FinanceiroPage() {
                   placeholder="financeiro@exemplo.com"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/50 bg-slate-50/50 dark:bg-[#071321] text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  O Asaas enviará para este e-mail o link de ativação <strong>(válido por 10 minutos)</strong> para cadastro da sua senha.
+                </p>
               </div>
 
               <div>
@@ -1817,338 +1849,206 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      {/* MODAL DE VALIDAÇÃO DE IDENTIDADE (KYC 100% WHITE LABEL NO CÉOS) */}
+      {/* MODAL EXPLICATIVO DE VALIDAÇÃO DE CONTA NO ASAAS (PASSO A PASSO) */}
       {modalValidacaoAberto && subconta && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/50 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col relative overflow-hidden">
             {/* Header do Modal */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-blue-900/30 flex items-center justify-between shrink-0">
+            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-blue-900/30 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-[#071321]/50">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 rounded-2xl bg-blue-600/10 text-blue-600 dark:text-blue-400">
-                  <Camera className="w-5 h-5" />
+                <span className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20">
+                  <ShieldCheck className="w-5 h-5" />
                 </span>
                 <div>
                   <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white">
-                    Validação de Identidade (White Label)
+                    Como Validar sua Conta no Asaas
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Envio direto de documentos e selfie pelo Céos para liberação do Pix
+                    Siga o passo a passo para aprovar seus documentos e liberar transferências e saques Pix
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setModalValidacaoAberto(false)}
-                className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-blue-950/40 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-blue-950/60 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* SELETOR DE ABAS DO MODAL */}
-            <div className="px-5 sm:px-6 pt-3 flex items-center gap-2 border-b border-slate-100 dark:border-blue-900/20 shrink-0">
-              <button
-                type="button"
-                onClick={() => setAbaModalValidacao("upload")}
-                className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
-                  abaModalValidacao === "upload"
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                <Upload className="w-4 h-4" />
-                <span>Envio Direto pelo Céos</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAbaModalValidacao("qrcode")}
-                className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
-                  abaModalValidacao === "qrcode"
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                <Smartphone className="w-4 h-4" />
-                <span>Abrir no Celular</span>
-              </button>
-            </div>
-
             {/* CORPO DO MODAL COM SCROLL */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 grow">
-              {/* FEEDBACK DE SUCESSO OU ERRO */}
-              {feedbackDoc && (
-                <div
-                  className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold ${
-                    feedbackDoc.tipo === "sucesso"
-                      ? "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200"
-                      : "bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200"
-                  }`}
-                >
-                  {feedbackDoc.tipo === "sucesso" ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  ) : (
-                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
-                  )}
-                  <span>{feedbackDoc.msg}</span>
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 grow">
+              {/* FEEDBACK DE REENVIO DE EMAIL */}
+              {mensagemSucesso && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{mensagemSucesso}</span>
+                </div>
+              )}
+              {mensagemErro && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{mensagemErro}</span>
                 </div>
               )}
 
-              {/* ABA 1: ENVIO DIRETO PELO CÉOS */}
-              {abaModalValidacao === "upload" && (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-300 leading-relaxed">
-                    💡 <strong>100% no Céos:</strong> Anexe suas fotos abaixo. Os arquivos são transmitidos de forma criptografada diretamente para a esteira de análise cadastral do Asaas.
+              {/* CARD DE INFORMAÇÃO DA SUBCONTA */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border border-blue-500/20 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[11px]">E-mail de Login da Subconta:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                      {subconta.dadosCadastrais?.email || email || user?.email || "E-mail cadastrado"}
+                    </span>
                   </div>
-
-                  {subconta.documentos && subconta.documentos.length > 0 ? (
-                    <div className="space-y-4">
-                      {subconta.documentos.map((docItem: any) => {
-                        const isSelfie = docItem.type === "IDENTIFICATION_SELFIE";
-                        const isDocId = docItem.type === "IDENTIFICATION";
-                        const arquivoSelecionado = arquivosUpload[docItem.id];
-                        const preview = previewsUpload[docItem.id];
-                        const enviandoEste = enviandoDocId === docItem.id;
-
-                        let tituloDoc = docItem.title || docItem.type;
-                        let instrucaoDoc = "Foto nítida em formato JPG, PNG ou PDF.";
-                        if (isSelfie) {
-                          tituloDoc = "Selfie Facial do Titular";
-                          instrucaoDoc = "Foto nítida do seu rosto, olhando para a câmera, em local iluminado (sem óculos ou boné).";
-                        } else if (isDocId) {
-                          tituloDoc = "Documento de Identificação (RG ou CNH)";
-                          instrucaoDoc = "Foto frente e verso do RG ou CNH aberta, ou arquivo PDF da CNH Digital.";
-                        }
-
-                        return (
-                          <div
-                            key={docItem.id}
-                            className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 space-y-3.5"
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5">
-                                <span className={`p-2 rounded-xl ${isSelfie ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"}`}>
-                                  {isSelfie ? <Camera className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                                </span>
-                                <div>
-                                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                                    {tituloDoc}
-                                  </h4>
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                    {instrucaoDoc}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <span
-                                className={`self-start sm:self-auto px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                  docItem.status === "APPROVED"
-                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                    : docItem.status === "AWAITING_APPROVAL"
-                                    ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-                                    : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                                }`}
-                              >
-                                {docItem.status === "APPROVED"
-                                  ? "● Aprovado"
-                                  : docItem.status === "AWAITING_APPROVAL"
-                                  ? "⏳ Em Análise no Asaas"
-                                  : "Pendente de Envio"}
-                              </span>
-                            </div>
-
-                            {/* CASO 1: APROVADO */}
-                            {docItem.status === "APPROVED" && (
-                              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                                <span>Este documento já foi validado e aprovado com sucesso!</span>
-                              </div>
-                            )}
-
-                            {/* CASO 2: EM ANÁLISE */}
-                            {docItem.status === "AWAITING_APPROVAL" && (
-                              <div className="p-3 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2">
-                                <Clock className="w-4 h-4 shrink-0 text-blue-600 animate-pulse" />
-                                <span>Arquivo já recebido pelo Asaas. A análise cadastral é automática e leva poucos minutos.</span>
-                              </div>
-                            )}
-
-                            {/* CASO 3: PENDENTE OU REJEITADO - PERMITE SELECIONAR E ENVIAR */}
-                            {docItem.status !== "APPROVED" && (
-                              <div className="space-y-3 pt-1">
-                                {docItem.rejectReasons && (
-                                  <div className="p-3 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs">
-                                    <strong>Motivo da recusa anterior:</strong> {docItem.rejectReasons}
-                                  </div>
-                                )}
-
-                                <input
-                                  type="file"
-                                  id={`file-input-${docItem.id}`}
-                                  accept={isSelfie ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,application/pdf"}
-                                  capture={isSelfie ? "user" : undefined}
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0] || null;
-                                    handleSelecionarArquivo(docItem.id, f);
-                                  }}
-                                />
-
-                                {/* PREVIEW DA IMAGEM SELECIONADA */}
-                                {preview ? (
-                                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={preview}
-                                      alt="Preview"
-                                      className="w-14 h-14 object-cover rounded-lg border border-slate-200 dark:border-blue-900/40 shrink-0"
-                                    />
-                                    <div className="grow min-w-0">
-                                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                                        {arquivoSelecionado?.name}
-                                      </p>
-                                      <p className="text-[11px] text-slate-400">
-                                        {((arquivoSelecionado?.size || 0) / (1024 * 1024)).toFixed(2)} MB • Pronto para enviar
-                                      </p>
-                                    </div>
-                                    <label
-                                      htmlFor={`file-input-${docItem.id}`}
-                                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-blue-900/40 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 cursor-pointer transition-colors"
-                                    >
-                                      Trocar
-                                    </label>
-                                  </div>
-                                ) : (
-                                  <label
-                                    htmlFor={`file-input-${docItem.id}`}
-                                    className="border-2 border-dashed border-slate-300 dark:border-blue-900/60 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-all cursor-pointer text-center group"
-                                  >
-                                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                      {isSelfie ? <Camera className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                      {isSelfie ? "Tirar Selfie ou Escolher Foto do Rosto" : "Tirar Foto ou Selecionar RG/CNH"}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400">
-                                      {isSelfie ? "Câmera frontal ou arquivo JPG/PNG" : "Formatos aceitos: JPG, PNG ou PDF (até 10MB)"}
-                                    </span>
-                                  </label>
-                                )}
-
-                                {/* BOTÃO DE ENVIO DO ARQUIVO */}
-                                {arquivoSelecionado && (
-                                  <button
-                                    type="button"
-                                    disabled={enviandoEste}
-                                    onClick={() => handleEnviarDocumento(docItem.id, docItem.type)}
-                                    className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-                                  >
-                                    {enviandoEste ? (
-                                      <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Transmitindo para o Asaas...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Send className="w-4 h-4" />
-                                        <span>Enviar {tituloDoc} para Análise</span>
-                                      </>
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-slate-400 text-xs">
-                      Nenhum documento pendente no momento.
-                    </div>
-                  )}
+                  <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    ⏳ Validação Exigida pelo Banco Central
+                  </span>
                 </div>
-              )}
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed pt-1 border-t border-blue-500/10">
+                  💡 Por exigência de segurança regulatória, a criação de senha e a biometria facial são realizadas diretamente no ambiente seguro do <strong>Asaas</strong> (instituição financeira regulada pelo Banco Central parceira da Céos System).
+                </p>
+              </div>
 
-              {/* ABA 2: ABRIR NO SMARTPHONE VIA QR CODE DO CÉOS */}
-              {abaModalValidacao === "qrcode" && (() => {
-                const urlPainelCeos = typeof window !== "undefined" ? window.location.href : "http://localhost:3000/usuario/painel/financeiro";
-
-                return (
-                  <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-purple-500/10 border border-blue-500/20 text-center space-y-4">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-xs">
-                      <Smartphone className="w-3.5 h-3.5" />
-                      <span>Fotografe com a Câmera do Celular</span>
+              {/* OS 4 PASSOS DIDÁTICOS */}
+              <div className="space-y-3">
+                {/* PASSO 1 */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 rounded-xl bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
+                        1
+                      </span>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        Abra o E-mail de Ativação do Asaas
+                      </h4>
                     </div>
-
-                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
-                      Se estiver no computador, escaneie o QR Code abaixo com seu smartphone para abrir o Céos System diretamente no seu celular e tirar as fotos com a câmera nativa:
+                    <span className="p-1.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      <Mail className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    O Asaas enviou uma mensagem para <strong>{subconta.dadosCadastrais?.email || email || user?.email}</strong> com o assunto <em>&quot;Ative sua conta&quot;</em> ou <em>&quot;Cadastre sua senha de acesso&quot;</em>.
+                  </p>
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-900 dark:text-amber-200 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Atenção: O link expira em 10 minutos</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                      O link de ativação enviado pelo Asaas possui <strong>prazo de validade estrito de 10 minutos</strong> a partir da criação da subconta. Acesse sua caixa de entrada imediatamente para definir sua senha.
                     </p>
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px] pt-0.5">
+                      ⚠️ Caso não localize o e-mail na Caixa de Entrada principal, verifique com urgência a pasta de <strong>Spam / Lixo Eletrônico</strong>.
+                    </p>
+                  </div>
+                </div>
 
-                    {/* QR CODE QUE APONTA PARA O CÉOS (E NÃO PARA O LOGIN DO ASAAS) */}
-                    <div className="flex justify-center py-1">
-                      <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-200 dark:border-white/20">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(
-                            urlPainelCeos
-                          )}`}
-                          alt="QR Code para abrir o painel financeiro do Céos no celular"
-                          className="w-[190px] h-[190px] rounded-xl"
-                        />
-                      </div>
+                {/* PASSO 2 */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
+                        2
+                      </span>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        Cadastre sua Senha Pessoal no Asaas
+                      </h4>
                     </div>
+                    <span className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                      <Key className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Clique no botão de ativação dentro do e-mail recebido <strong>(dentro do prazo de 10 minutos)</strong> e defina a sua senha de segurança. Essa senha é exclusiva para sua subconta bancária e garante que apenas você tem poder sobre ela.
+                  </p>
+                </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(urlPainelCeos);
-                          setLinkCopiado(true);
-                          setTimeout(() => setLinkCopiado(false), 2000);
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-blue-500 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                      >
-                        {linkCopiado ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="text-emerald-600 text-[11px]">Link do Céos Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-[11px]">Copiar Link do Céos</span>
-                          </>
-                        )}
-                      </button>
+                {/* PASSO 3 */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 rounded-xl bg-purple-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
+                        3
+                      </span>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        Envie os Documentos & Biometria Facial
+                      </h4>
                     </div>
-
-                    <div className="p-3.5 rounded-2xl bg-white dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 text-[11px] text-slate-500 dark:text-slate-400 text-left space-y-1">
-                      <p>✅ O link abre esta mesma tela no seu celular;</p>
-                      <p>✅ Você faz o upload da foto do RG/CNH e da Selfie usando a câmera do próprio smartphone;</p>
-                      <p>✅ O promotor nunca precisa criar senha ou acessar o site do Asaas.</p>
+                    <span className="p-1.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                      <Camera className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Após definir a senha e entrar no portal do Asaas (pelo celular ou computador), você passará por 3 checagens rápidas:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1">
+                    <div className="p-2 rounded-xl bg-white dark:bg-[#0c1e33] border border-slate-200/60 dark:border-blue-900/30">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">📱 Confirmação SMS</span>
+                      <span className="text-slate-500">Código de 6 dígitos enviado para seu celular.</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-[#0c1e33] border border-slate-200/60 dark:border-blue-900/30">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">📄 Foto do Documento</span>
+                      <span className="text-slate-500">RG ou CNH aberta, nítida e sem reflexos.</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white dark:bg-[#0c1e33] border border-slate-200/60 dark:border-blue-900/30">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">🤳 Biometria Facial</span>
+                      <span className="text-slate-500">Selfie rápida para prova de vida via câmera.</span>
                     </div>
                   </div>
-                );
-              })()}
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold pt-0.5">
+                    ⚡ A inteligência artificial do Asaas analisa os dados e costuma aprovar em poucos minutos.
+                  </p>
+                </div>
+
+                {/* PASSO 4 */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 rounded-xl bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
+                        4
+                      </span>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        Concluído! Atualize o Céos System
+                      </h4>
+                    </div>
+                    <span className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Assim que seus documentos forem aprovados no Asaas, retorne a esta página e clique no botão verde abaixo. Seu status será atualizado imediatamente e você já poderá cadastrar chaves Pix e transferir valores!
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Footer do Modal */}
             <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-blue-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 bg-slate-50/50 dark:bg-[#071321]/50">
-              <span className="text-[11px] text-slate-500 text-center sm:text-left">
-                Após enviar os documentos, a IA do Asaas aprova em poucos minutos.
-              </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  await handleAtualizarSaldo();
-                  setModalValidacaoAberto(false);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+              <a
+                href="https://www.asaas.com/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/50 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 flex items-center justify-center gap-1.5 transition-colors"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Atualizar e Fechar</span>
-              </button>
+                <span>Acessar Portal do Asaas</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleAtualizarSaldo();
+                  }}
+                  disabled={recarregandoSaldo}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${recarregandoSaldo ? "animate-spin" : ""}`} />
+                  <span>{recarregandoSaldo ? "Verificando Status..." : "Já Concluí no Asaas, Atualizar Status"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
