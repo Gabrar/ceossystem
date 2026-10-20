@@ -83,7 +83,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
           <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
           <p className="text-xs sm:text-sm font-semibold text-slate-400">
-            Carregando painel do Dono...
+            Carregando Painel Administrativo...
           </p>
         </div>
       </div>
@@ -114,14 +114,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 Céos System
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
-                <span>Painel do Dono</span>
+                <span>Painel Administrativo</span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Perfil Rápido do Dono */}
+        {/* Perfil Rápido do Administrador */}
         <div className="px-6 py-4 border-b border-blue-900/30 bg-[#071321]/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 border border-amber-400/30 flex items-center justify-center text-amber-300 font-bold text-sm shrink-0">
@@ -136,7 +136,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </p>
               <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 mt-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <Crown className="w-2.5 h-2.5" />
-                <span>{adminProfile?.role === "dono" ? "Proprietário" : "Admin"}</span>
+                <span>{adminProfile?.role === "dono" ? "Super Admin" : "Administrador"}</span>
               </span>
             </div>
           </div>
@@ -239,7 +239,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </span>
               <span className="text-slate-500 hidden sm:inline">•</span>
               <span className="text-xs text-slate-400 hidden md:inline">
-                Visão Master do Dono
+                Visão Geral
               </span>
             </div>
           </div>
@@ -275,7 +275,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center gap-2">
                   <Crown className="w-5 h-5 text-amber-400" />
                   <span className="font-montserrat font-bold text-white text-sm">
-                    Painel do Dono
+                    Painel Administrativo
                   </span>
                 </div>
                 <button

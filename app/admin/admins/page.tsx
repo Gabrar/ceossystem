@@ -177,23 +177,7 @@ export default function AdminAdminsPage() {
         </button>
       </div>
 
-      {/* CARD DE INFORMAÇÃO ARQUITETURAL */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3.5">
-        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-          <ShieldAlert className="w-5 h-5" />
-        </div>
-        <div className="space-y-1 text-xs">
-          <p className="font-bold text-amber-300">
-            Arquitetura de Coleções Separadas (/admins vs /users)
-          </p>
-          <p className="text-slate-300 leading-relaxed">
-            Conforme solicitado, os administradores são gravados estritamente na pasta{" "}
-            <code className="bg-amber-950/60 text-amber-400 px-1.5 py-0.5 rounded font-mono">/admins</code> no Firestore.
-            Eles não se misturam com a coleção <code className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">/users</code> (onde ficam os promotores e participantes comuns).
-            Apenas as contas autenticadas nesta lista possuem permissão de acesso ao Painel do Dono.
-          </p>
-        </div>
-      </div>
+      
 
       {/* TABELA DE ADMINISTRADORES */}
       <div className="bg-[#0c1e33] rounded-3xl border border-blue-900/40 shadow-xl overflow-hidden">
@@ -238,7 +222,7 @@ export default function AdminAdminsPage() {
                     <td className="py-4 px-4 text-center">
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
                         <Crown className="w-3 h-3" />
-                        <span>{adm.role === "dono" ? "Proprietário Dono" : "Administrador"}</span>
+                        <span>{adm.role === "dono" ? "Super Admin" : "Administrador"}</span>
                       </span>
                     </td>
 
@@ -266,7 +250,7 @@ export default function AdminAdminsPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       ) : (
-                        <span className="text-[10px] text-slate-500 italic">Dono Único</span>
+                        <span className="text-[10px] text-slate-500 italic">Admin Principal</span>
                       )}
                     </td>
                   </tr>
@@ -369,7 +353,7 @@ export default function AdminAdminsPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#071321] border border-blue-900/50 text-white focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
                   <option value="admin">Administrador Regular</option>
-                  <option value="dono">Proprietário Dono (Acesso Irrestrito)</option>
+                  <option value="dono">Super Admin / Dono (Acesso Total)</option>
                 </select>
               </div>
 
@@ -413,7 +397,7 @@ export default function AdminAdminsPage() {
               <p className="text-xs text-slate-400">
                 Você está prestes a remover <strong className="text-white">{adminExcluir.nome}</strong>{" "}
                 ({adminExcluir.email}) da pasta <code className="text-amber-400">/admins</code>.
-                Esta pessoa perderá o acesso imediato ao Painel do Dono.
+                Esta pessoa perderá o acesso imediato ao Painel do Administrador.
               </p>
             </div>
 

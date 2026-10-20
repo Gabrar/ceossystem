@@ -476,7 +476,7 @@ export default function AdminUsuariosPage() {
                     <td className="py-3.5 px-4 text-slate-300">{adm.email}</td>
                     <td className="py-3.5 px-4 text-center">
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase">
-                        {adm.role === "dono" ? "Proprietário Dono" : "Administrador"}
+                        {adm.role === "dono" ? "Super Admin" : "Administrador"}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">

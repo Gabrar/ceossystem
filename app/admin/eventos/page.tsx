@@ -375,7 +375,7 @@ export default function AdminEventosPage() {
                   <th className="py-3.5 px-4 text-center">Taxa Céos</th>
                   <th className="py-3.5 px-4 text-right">Lucro Céos</th>
                   <th className="py-3.5 px-4 text-right">Repasse Promotor</th>
-                  <th className="py-3.5 px-5 text-right">Ações do Dono</th>
+                  <th className="py-3.5 px-5 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-blue-900/20">

@@ -236,7 +236,7 @@ export default function AdminDashboardPage() {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-widest">
             <Crown className="w-3.5 h-3.5" />
-            <span>Painel Estratégico do Dono</span>
+            <span>Painel Administrativo</span>
           </div>
           <h1 className="font-montserrat text-2xl sm:text-3xl font-extrabold text-white mt-1">
             Visão Geral da Plataforma
@@ -1185,7 +1185,7 @@ export default function AdminDashboardPage() {
                 <h3 className="font-montserrat font-bold text-base text-white">
                   Negociar Taxa da Céos System
                 </h3>
-                <p className="text-xs text-slate-400">Alteração exclusiva do Dono</p>
+                <p className="text-xs text-slate-400">Alteração de taxa administrativa</p>
               </div>
             </div>
 

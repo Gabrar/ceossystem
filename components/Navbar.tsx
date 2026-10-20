@@ -160,7 +160,7 @@ export default function Navbar() {
                                         className="flex items-center gap-2 px-4 py-2.5 text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
                                     >
                                         <Shield className="w-4 h-4" />
-                                        <span>Painel do Dono</span>
+                                        <span>Painel do Administrador</span>
                                     </Link>
                                 )}
                                 <div className="h-px bg-slate-200 dark:bg-blue-900/40 my-1" />
