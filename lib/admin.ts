@@ -934,41 +934,14 @@ export async function excluirAdminDaPasta(adminId: string): Promise<boolean> {
 }
 
 /**
- * Registra um evento de visualização/visita na plataforma
- */
-export async function registrarVisita(tipo: "perfil" | "evento" | "plataforma", targetId?: string, targetNome?: string) {
-  try {
-    const agora = new Date();
-    const dataStr = agora.toISOString().split("T")[0]; // YYYY-MM-DD
-    const mesStr = dataStr.substring(0, 7); // YYYY-MM
-    const anoStr = String(agora.getFullYear());
-
-    await addDoc(collection(db, "visitas_metricas"), {
-      tipo,
-      targetId: targetId || "geral",
-      targetNome: targetNome || "Céos System",
-      data: dataStr,
-      mes: mesStr,
-      ano: anoStr,
-      timestamp: serverTimestamp(),
-    });
-  } catch {
-    // Falha silenciosa para não travar navegação
-  }
-}
-
-/**
- * Gera pontos de dados analíticos para gráficos (por dia, mês ou ano)
+ * Gera pontos de conversões e vendas Céos para gráficos (visitas são auditadas via Vercel Analytics)
  */
 export async function buscarDadosGraficoVisitas(
   periodo: "dia" | "mes" | "ano"
 ): Promise<{ pontos: VisitaDataPoint[]; totalVisitas: number; totalConversoes: number }> {
   try {
-    // Busca dados reais de inscrições e visitas
-    const [visitasSnap, inscricoesSnap] = await Promise.all([
-      getDocs(query(collection(db, "visitas_metricas"), limit(500))),
-      getDocs(query(collection(db, "inscricoes"), limit(500))),
-    ]);
+    // Busca dados reais de inscrições da plataforma Céos
+    const inscricoesSnap = await getDocs(query(collection(db, "inscricoes"), limit(500)));
 
     const hoje = new Date();
     const pontos: VisitaDataPoint[] = [];
@@ -981,12 +954,6 @@ export async function buscarDadosGraficoVisitas(
         const dataKey = d.toISOString().split("T")[0];
         const diaFormatado = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit" });
 
-        // Conta visitas registradas
-        let visitasCount = 0;
-        visitasSnap.docs.forEach((doc) => {
-          if (doc.data().data === dataKey) visitasCount++;
-        });
-
         // Conta conversões e receita desse dia
         let convCount = 0;
         let receitaDia = 0;
@@ -998,12 +965,9 @@ export async function buscarDadosGraficoVisitas(
           }
         });
 
-        // Se a base de dados ainda for recém-criada, compõe curva realista proporcional
-        const visitasFinal = visitasCount > 0 ? visitasCount : Math.floor(18 + (i * 7) % 23 + convCount * 6);
-
         pontos.push({
           label: diaFormatado,
-          visitas: visitasFinal,
+          visitas: 0,
           conversoes: convCount,
           receita: Number(receitaDia.toFixed(2)),
         });
@@ -1015,11 +979,6 @@ export async function buscarDadosGraficoVisitas(
 
       for (let m = 0; m < 12; m++) {
         const mesKey = `${anoAtual}-${String(m + 1).padStart(2, "0")}`;
-        let visitasCount = 0;
-        visitasSnap.docs.forEach((doc) => {
-          if (doc.data().mes === mesKey) visitasCount++;
-        });
-
         let convCount = 0;
         let receitaMes = 0;
         inscricoesSnap.docs.forEach((doc) => {
@@ -1030,13 +989,9 @@ export async function buscarDadosGraficoVisitas(
           }
         });
 
-        // Mock visual enriquecido se mês ainda não tiver visitas registradas
-        const baseVisitas = m <= hoje.getMonth() ? Math.floor(120 + m * 45 + convCount * 12) : 0;
-        const visitasFinal = visitasCount > 0 ? visitasCount : baseVisitas;
-
         pontos.push({
           label: mesesNomes[m],
-          visitas: visitasFinal,
+          visitas: 0,
           conversoes: convCount,
           receita: Number(receitaMes.toFixed(2)),
         });
@@ -1046,11 +1001,6 @@ export async function buscarDadosGraficoVisitas(
       const anoAtual = hoje.getFullYear();
       for (let y = anoAtual - 2; y <= anoAtual; y++) {
         const anoKey = String(y);
-        let visitasCount = 0;
-        visitasSnap.docs.forEach((doc) => {
-          if (doc.data().ano === anoKey) visitasCount++;
-        });
-
         let convCount = 0;
         let receitaAno = 0;
         inscricoesSnap.docs.forEach((doc) => {
@@ -1061,30 +1011,20 @@ export async function buscarDadosGraficoVisitas(
           }
         });
 
-        const visitasFinal =
-          visitasCount > 0
-            ? visitasCount
-            : y === anoAtual
-            ? 1840 + convCount * 15
-            : y === anoAtual - 1
-            ? 920
-            : 340;
-
         pontos.push({
           label: anoKey,
-          visitas: visitasFinal,
+          visitas: 0,
           conversoes: convCount,
           receita: Number(receitaAno.toFixed(2)),
         });
       }
     }
 
-    const totalVisitas = pontos.reduce((acc, p) => acc + p.visitas, 0);
     const totalConversoes = pontos.reduce((acc, p) => acc + p.conversoes, 0);
 
-    return { pontos, totalVisitas, totalConversoes };
+    return { pontos, totalVisitas: 0, totalConversoes };
   } catch (err) {
-    console.error("Erro ao gerar dados do gráfico de visitas:", err);
+    console.error("Erro ao gerar dados de conversão:", err);
     return { pontos: [], totalVisitas: 0, totalConversoes: 0 };
   }
 }

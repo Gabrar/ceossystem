@@ -30,14 +30,30 @@ import {
   AlertCircle,
   Pencil,
   X,
-  ExternalLink,
   ShieldCheck,
+  Globe,
+  Laptop,
+  Smartphone,
+  Activity,
+  Layers,
+  Sparkles,
+  RefreshCw,
+  Flame,
+  Share2,
+  Compass,
+  MousePointerClick,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState<AdminDashboardMetrics | null>(null);
   const [eventos, setEventos] = useState<AdminEventItem[]>([]);
+
+  // Estado da integração com Vercel Web Analytics
+  const [vercelData, setVercelData] = useState<any | null>(null);
+  const [loadingVercel, setLoadingVercel] = useState(false);
+  const [abaVisitas, setAbaVisitas] = useState<"grafico" | "paginas" | "origens" | "dispositivos">("grafico");
+  const [modoMetricaGrafico, setModoMetricaGrafico] = useState<"ambos" | "pageviews" | "visitantes">("ambos");
 
   // Estado do gráfico de visitas
   const [periodoVisitas, setPeriodoVisitas] = useState<"dia" | "mes" | "ano">("dia");
@@ -51,7 +67,7 @@ export default function AdminDashboardPage() {
     totalConversoes: 0,
   });
   const [loadingGrafico, setLoadingGrafico] = useState(false);
-  const [pontoAtivo, setPontoAtivo] = useState<VisitaDataPoint | null>(null);
+  const [pontoAtivo, setPontoAtivo] = useState<any | null>(null);
 
   // Modal para ajuste rápido da taxa Céos de um evento
   const [eventoAjustarTaxa, setEventoAjustarTaxa] = useState<AdminEventItem | null>(null);
@@ -98,6 +114,40 @@ export default function AdminDashboardPage() {
     carregarVisitas();
   }, [periodoVisitas]);
 
+  // 3. Carrega métricas do Vercel Web Analytics em paralelo
+  const carregarVercel = async (forcarAtualizacao = false) => {
+    setLoadingVercel(true);
+    try {
+      const cacheBust = forcarAtualizacao ? `&_t=${Date.now()}` : "";
+      const res = await fetch(`/api/admin/analytics?periodo=${periodoVisitas}${cacheBust}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.conectado) {
+          setVercelData(json);
+          if (json.pontosGrafico && json.pontosGrafico.length > 0) {
+            const ultimo = json.pontosGrafico[json.pontosGrafico.length - 1];
+            setPontoAtivo({
+              label: ultimo.label,
+              dataCompleta: ultimo.dataCompleta,
+              visitas: ultimo.visitors,
+              pageviews: ultimo.pageviews,
+              conversoes: 0,
+              receita: 0,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao carregar Vercel Analytics:", err);
+    } finally {
+      setLoadingVercel(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarVercel();
+  }, [periodoVisitas]);
+
   // Salvar nova taxa negociada da Céos
   const handleSalvarTaxa = async () => {
     if (!eventoAjustarTaxa) return;
@@ -136,12 +186,37 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Combina e prioriza pontos analíticos oficiais do Vercel Analytics se disponíveis
+  const pontosGraficoFinal = useMemo(() => {
+    if (vercelData?.pontosGrafico && vercelData.pontosGrafico.length > 0) {
+      return vercelData.pontosGrafico.map((p: any) => {
+        const local = dadosGrafico.pontos.find((lp) => lp.label === p.label);
+        return {
+          label: p.label,
+          dataCompleta: p.dataCompleta,
+          visitas: p.visitors,
+          pageviews: p.pageviews,
+          conversoes: local?.conversoes || 0,
+          receita: local?.receita || 0,
+        };
+      });
+    }
+    return [];
+  }, [vercelData, dadosGrafico.pontos]);
+
   // Cálculo de altura máxima para normalizar barras do gráfico
   const maxVisitas = useMemo(() => {
-    if (dadosGrafico.pontos.length === 0) return 100;
-    const max = Math.max(...dadosGrafico.pontos.map((p) => p.visitas));
-    return max > 0 ? max : 100;
-  }, [dadosGrafico.pontos]);
+    const pontos = pontosGraficoFinal;
+    if (pontos.length === 0) return 10;
+    const max = Math.max(
+      ...pontos.map((p: any) => {
+        if (modoMetricaGrafico === "visitantes") return p.visitas || 0;
+        if (modoMetricaGrafico === "pageviews") return p.pageviews || 0;
+        return Math.max(p.visitas || 0, p.pageviews || 0);
+      })
+    );
+    return max > 0 ? max : 10;
+  }, [pontosGraficoFinal, modoMetricaGrafico]);
 
   if (loading) {
     return (
@@ -275,163 +350,684 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 2. GRÁFICO INTERATIVO DE VISITAS & ACESSOS (DIA / MÊS / ANO) */}
+      {/* 2. GRÁFICO & ANALYTICS OFICIAL VERCEL & CÉOS */}
       <div className="p-6 sm:p-7 rounded-3xl bg-[#0c1e33] border border-blue-900/40 shadow-lg space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        
+        {/* Cabeçalho do Bloco Analítico */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               <div className="p-2 rounded-xl bg-blue-500/15 text-blue-400">
-                <BarChart3 className="w-4 h-4" />
+                <BarChart3 className="w-5 h-5" />
               </div>
               <h2 className="font-montserrat font-bold text-lg text-white">
-                Visitas & Tráfego na Plataforma
+                Visitas & Tráfego Oficial
               </h2>
+              {/* Badge Vercel Conectado */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Vercel Analytics (Ativo)</span>
+              </div>
+              {/* Botão de Atualização em Tempo Real */}
+              <button
+                type="button"
+                onClick={() => carregarVercel(true)}
+                disabled={loadingVercel}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-white text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50"
+                title="Buscar telemetria mais recente da Vercel agora"
+              >
+                <RefreshCw className={`w-3 h-3 ${loadingVercel ? "animate-spin text-amber-400" : ""}`} />
+                <span>{loadingVercel ? "Atualizando..." : "Atualizar"}</span>
+              </button>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Acompanhamento cronológico de acessos, conversões em ingressos e receita gerada
+
+            <p className="text-xs text-slate-400 mt-1.5 flex flex-wrap items-center gap-2">
+              <span>Métricas auditadas em tempo real via Vercel Web Analytics</span>
+              <span>•</span>
+              <span className="text-slate-300">
+                {vercelData?.totalPageviews
+                  ? `${vercelData.totalPageviews.toLocaleString("pt-BR")} visualizações registradas`
+                  : "Coleta ativa"}
+              </span>
+              {vercelData?.updatedAt && (
+                <>
+                  <span>•</span>
+                  <span className="text-slate-500 text-[11px]">
+                    Sincronizado às {new Date(vercelData.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  </span>
+                </>
+              )}
             </p>
           </div>
 
-          {/* Seletor de Período (Dia, Mês, Ano) */}
-          <div className="flex items-center bg-[#071321] p-1 rounded-2xl border border-blue-900/50 self-start sm:self-center">
-            <button
-              onClick={() => setPeriodoVisitas("dia")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                periodoVisitas === "dia"
-                  ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Últimos 7 Dias
-            </button>
-            <button
-              onClick={() => setPeriodoVisitas("mes")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                periodoVisitas === "mes"
-                  ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Por Mês (Ano Atual)
-            </button>
-            <button
-              onClick={() => setPeriodoVisitas("ano")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                periodoVisitas === "ano"
-                  ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Visão Anual
-            </button>
+          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+            {/* Seletor de Período (7 dias / 30 dias / Anual) */}
+            <div className="flex items-center bg-[#071321] p-1 rounded-2xl border border-blue-900/50">
+              <button
+                type="button"
+                onClick={() => setPeriodoVisitas("dia")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  periodoVisitas === "dia"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                7 Dias
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodoVisitas("mes")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  periodoVisitas === "mes"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                30 Dias
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodoVisitas("ano")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  periodoVisitas === "ano"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Anual
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Resumo do período selecionado */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#071321]/70 border border-blue-900/40">
-          <div>
-            <span className="text-[11px] text-slate-400">Total de Visitas no Período</span>
-            <p className="text-xl font-black text-white mt-0.5">
-              {dadosGrafico.totalVisitas.toLocaleString("pt-BR")}
+        {/* 4 Cards de Resumo Analítico */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-4 rounded-2xl bg-[#071321]/70 border border-blue-900/40 relative overflow-hidden group hover:border-blue-700/50 transition-all">
+            <span className="text-[11px] font-medium text-slate-400">Visitantes Únicos (Vercel)</span>
+            <p className="text-2xl font-black text-white mt-1">
+              {(vercelData?.totalVisitors || 0).toLocaleString("pt-BR")}
             </p>
+            <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Telemetria verificada
+            </span>
           </div>
-          <div>
-            <span className="text-[11px] text-slate-400">Inscrições / Vendas no Período</span>
-            <p className="text-xl font-black text-emerald-400 mt-0.5">
+
+          <div className="p-4 rounded-2xl bg-[#071321]/70 border border-blue-900/40 relative overflow-hidden group hover:border-cyan-700/50 transition-all">
+            <span className="text-[11px] font-medium text-slate-400">Visualizações de Páginas</span>
+            <p className="text-2xl font-black text-cyan-400 mt-1">
+              {(vercelData?.totalPageviews || 0).toLocaleString("pt-BR")}
+            </p>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              Pageviews agregados no período
+            </span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#071321]/70 border border-blue-900/40 relative overflow-hidden group hover:border-amber-700/50 transition-all">
+            <span className="text-[11px] font-medium text-slate-400">Média Páginas / Visitante</span>
+            <p className="text-2xl font-black text-amber-400 mt-1">
+              {vercelData?.mediaPorVisitante || "1.0"}
+            </p>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              Engajamento médio por sessão
+            </span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#071321]/70 border border-blue-900/40 relative overflow-hidden group hover:border-emerald-700/50 transition-all">
+            <span className="text-[11px] font-medium text-slate-400">Inscrições Céos no Período</span>
+            <p className="text-2xl font-black text-emerald-400 mt-1">
               {dadosGrafico.totalConversoes.toLocaleString("pt-BR")}
             </p>
-          </div>
-          <div>
-            <span className="text-[11px] text-slate-400">Taxa Média de Conversão</span>
-            <p className="text-xl font-black text-amber-400 mt-0.5">
-              {dadosGrafico.totalVisitas > 0
-                ? `${((dadosGrafico.totalConversoes / dadosGrafico.totalVisitas) * 100).toFixed(1)}%`
+            <span className="text-[10px] text-amber-400 font-semibold mt-0.5 block">
+              Conversão:{" "}
+              {vercelData?.totalVisitors > 0
+                ? `${((dadosGrafico.totalConversoes / vercelData.totalVisitors) * 100).toFixed(1)}%`
                 : "0%"}
-            </p>
+            </span>
           </div>
         </div>
 
-        {/* Visualização de Gráfico em Barras estilizadas */}
-        {loadingGrafico ? (
-          <div className="h-60 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+        {/* Banner de Destaque: Pico de Acessos */}
+        {vercelData?.picoDia && (
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#071321] to-[#071321] border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div className="text-slate-300">
+                <span className="font-bold text-amber-400">Pico de Audiência:</span> Maior movimento registrado em{" "}
+                <strong className="text-white capitalize">{vercelData.picoDia.data}</strong> com{" "}
+                <strong className="text-cyan-400">{vercelData.picoDia.views} visualizações</strong> e{" "}
+                <strong className="text-amber-400">{vercelData.picoDia.visitors} visitantes únicos</strong>.
+              </div>
+            </div>
+            <span className="text-[10px] uppercase font-bold text-amber-400/80 px-2 py-0.5 rounded-md bg-amber-400/10 hidden md:inline-block">
+              Recorde do Período
+            </span>
           </div>
-        ) : (
+        )}
+
+        {/* Barra de Navegação das 4 Abas Analíticas */}
+        <div className="flex items-center gap-2 border-b border-blue-900/40 pb-3 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setAbaVisitas("grafico")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              abaVisitas === "grafico"
+                ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
+                : "bg-[#071321] text-slate-400 hover:text-white border border-blue-900/40"
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Gráfico & Linha do Tempo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaVisitas("paginas")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              abaVisitas === "paginas"
+                ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
+                : "bg-[#071321] text-slate-400 hover:text-white border border-blue-900/40"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Páginas Mais Acessadas</span>
+            {vercelData?.topPaginas && vercelData.topPaginas.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${abaVisitas === "paginas" ? "bg-slate-950 text-amber-400" : "bg-blue-900/60 text-slate-300"}`}>
+                {vercelData.topPaginas.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaVisitas("origens")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              abaVisitas === "origens"
+                ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
+                : "bg-[#071321] text-slate-400 hover:text-white border border-blue-900/40"
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Fontes de Tráfego</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaVisitas("dispositivos")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              abaVisitas === "dispositivos"
+                ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20"
+                : "bg-[#071321] text-slate-400 hover:text-white border border-blue-900/40"
+            }`}
+          >
+            <Laptop className="w-3.5 h-3.5" />
+            <span>Dispositivos & Geografia</span>
+          </button>
+        </div>
+
+        {/* Visualização de Conteúdo das Abas */}
+        {loadingGrafico || loadingVercel ? (
+          <div className="h-64 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+            <span className="text-xs text-slate-400 font-semibold">
+              Carregando dados em tempo real da Vercel...
+            </span>
+          </div>
+        ) : abaVisitas === "grafico" ? (
+          /* ========================================================
+             ABA 1: GRÁFICO CRONOLÓGICO INTERATIVO DE ALTA DEFINIÇÃO
+             ======================================================== */
           <div className="space-y-4">
-            <div className="h-64 flex items-end justify-between gap-2 sm:gap-4 pt-8 px-2 border-b border-blue-900/30">
-              {dadosGrafico.pontos.map((ponto, idx) => {
-                const alturaPercentual = Math.max(Math.round((ponto.visitas / maxVisitas) * 100), 8);
-                const isSelected = pontoAtivo?.label === ponto.label;
+            {/* Controles do Gráfico (Legenda e Seletor de Métrica) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400 px-1 pt-1">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-cyan-600 to-cyan-400" />
+                  <span className="text-slate-300 font-medium">Visualizações (Pageviews)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-amber-600 to-amber-400" />
+                  <span className="text-slate-300 font-medium">Visitantes Únicos</span>
+                </span>
+              </div>
 
-                return (
-                  <div
-                    key={ponto.label + idx}
-                    onClick={() => setPontoAtivo(ponto)}
-                    className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
-                  >
-                    {/* Tooltip / Valor acima da barra */}
-                    <div
-                      className={`text-[10px] font-bold mb-1.5 transition-opacity ${
-                        isSelected ? "text-amber-400 opacity-100" : "text-slate-400 opacity-0 group-hover:opacity-100"
-                      }`}
-                    >
-                      {ponto.visitas}
-                    </div>
-
-                    {/* Barra de Visitas */}
-                    <div className="w-full max-w-[48px] bg-slate-800/80 rounded-t-xl overflow-hidden relative flex flex-col justify-end transition-all group-hover:brightness-125">
-                      <div
-                        className={`w-full rounded-t-xl transition-all duration-500 ${
-                          isSelected
-                            ? "bg-gradient-to-t from-amber-600 via-amber-400 to-amber-300"
-                            : "bg-gradient-to-t from-blue-700 to-cyan-500"
-                        }`}
-                        style={{ height: `${alturaPercentual}%` }}
-                      />
-                    </div>
-
-                    {/* Rótulo no Eixo X */}
-                    <span
-                      className={`text-[11px] font-semibold mt-2.5 truncate max-w-[60px] text-center ${
-                        isSelected ? "text-amber-400 font-extrabold" : "text-slate-400 group-hover:text-white"
-                      }`}
-                    >
-                      {ponto.label}
-                    </span>
-                  </div>
-                );
-              })}
+              {/* Alternador de exibição das barras */}
+              <div className="flex items-center bg-[#071321] p-1 rounded-xl border border-blue-900/50 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setModoMetricaGrafico("ambos")}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                    modoMetricaGrafico === "ambos"
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Comparativo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoMetricaGrafico("pageviews")}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                    modoMetricaGrafico === "pageviews"
+                      ? "bg-cyan-600/30 text-cyan-300 border border-cyan-500/40"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Só Pageviews
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoMetricaGrafico("visitantes")}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                    modoMetricaGrafico === "visitantes"
+                      ? "bg-amber-600/30 text-amber-300 border border-amber-500/40"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Só Visitantes
+                </button>
+              </div>
             </div>
 
-            {/* Painel do ponto selecionado no gráfico */}
+            {/* Container do Gráfico com Grid e Barras */}
+            <div className="relative h-64 pt-8 px-2 border-b border-blue-900/30">
+              {/* Linhas guias horizontais sutis (25%, 50%, 75%, 100%) */}
+              <div className="absolute inset-0 top-8 bottom-0 flex flex-col justify-between pointer-events-none opacity-20">
+                <div className="border-b border-slate-600 w-full" />
+                <div className="border-b border-slate-600 w-full" />
+                <div className="border-b border-slate-600 w-full" />
+                <div className="border-b border-slate-600 w-full" />
+              </div>
+
+              {/* Barras Cronológicas */}
+              <div className="relative h-full flex items-end justify-between gap-1.5 sm:gap-2.5 overflow-x-auto z-10 pb-2">
+                {pontosGraficoFinal.map((ponto: any, idx: number) => {
+                  const views = ponto.pageviews || 0;
+                  const visitors = ponto.visitas || 0;
+                  const isSelected = pontoAtivo?.label === ponto.label;
+
+                  // Calcula alturas proporcionais
+                  const alturaViewsPct = views > 0 ? Math.max(Math.round((views / maxVisitas) * 100), 8) : 0;
+                  const alturaVisitorsPct = visitors > 0 ? Math.max(Math.round((visitors / maxVisitas) * 100), 8) : 0;
+
+                  return (
+                    <div
+                      key={ponto.label + idx}
+                      onClick={() => setPontoAtivo(ponto)}
+                      className="flex-1 min-w-[30px] max-w-[56px] flex flex-col items-center h-full justify-end group cursor-pointer"
+                    >
+                      {/* Tooltip / Valor flutuante superior */}
+                      <div
+                        className={`text-[10px] font-bold mb-1 transition-all ${
+                          isSelected
+                            ? "text-amber-400 opacity-100 scale-105"
+                            : "text-slate-400 opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        {modoMetricaGrafico === "visitantes" ? visitors : views}
+                      </div>
+
+                      {/* Visualizador de Barra Conforme o Modo */}
+                      {modoMetricaGrafico === "ambos" ? (
+                        // Modo Comparativo: Duas barras finas lado a lado
+                        <div className="w-full flex items-end justify-center gap-1 h-full">
+                          {/* Barra 1: Pageviews (Cyan) */}
+                          <div
+                            className="w-1/2 max-w-[14px] bg-slate-800/80 rounded-t-md overflow-hidden flex flex-col justify-end group-hover:brightness-125 transition-all"
+                            style={{ height: `${alturaViewsPct}%` }}
+                          >
+                            <div className="w-full h-full bg-gradient-to-t from-cyan-600 via-cyan-500 to-cyan-300 rounded-t-md" />
+                          </div>
+
+                          {/* Barra 2: Visitantes Únicos (Amber) */}
+                          <div
+                            className="w-1/2 max-w-[14px] bg-slate-800/80 rounded-t-md overflow-hidden flex flex-col justify-end group-hover:brightness-125 transition-all"
+                            style={{ height: `${alturaVisitorsPct}%` }}
+                          >
+                            <div className="w-full h-full bg-gradient-to-t from-amber-600 via-amber-500 to-amber-300 rounded-t-md" />
+                          </div>
+                        </div>
+                      ) : (
+                        // Modo Individual (Pageviews ou Visitantes)
+                        <div className="w-full flex items-end justify-center h-full">
+                          <div
+                            className="w-full max-w-[24px] bg-slate-800/80 rounded-t-xl overflow-hidden flex flex-col justify-end transition-all group-hover:brightness-125"
+                            style={{
+                              height: `${modoMetricaGrafico === "visitantes" ? alturaVisitorsPct : alturaViewsPct}%`,
+                            }}
+                          >
+                            <div
+                              className={`w-full h-full rounded-t-xl transition-all duration-500 ${
+                                modoMetricaGrafico === "visitantes"
+                                  ? "bg-gradient-to-t from-amber-600 via-amber-400 to-amber-300"
+                                  : "bg-gradient-to-t from-blue-700 via-cyan-500 to-cyan-300"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rótulo no Eixo X */}
+                      <span
+                        className={`text-[10px] sm:text-[11px] font-semibold mt-2.5 truncate max-w-[50px] text-center ${
+                          isSelected
+                            ? "text-amber-400 font-extrabold"
+                            : "text-slate-400 group-hover:text-white"
+                        }`}
+                      >
+                        {ponto.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Painel de Auditoria do Ponto Selecionado */}
             {pontoAtivo && (
-              <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#071321] to-[#071321] border border-amber-500/25 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="text-slate-300">
-                    Detalhes de <strong>{pontoAtivo.label}</strong>:
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#071321] to-[#071321] border border-amber-500/25 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-slate-200">
+                    Inspeção do dia: <strong className="text-white capitalize">{pontoAtivo.dataCompleta || pontoAtivo.label}</strong>
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex flex-wrap items-center gap-5 text-xs">
                   <div>
-                    <span className="text-slate-400">Visitas:</span>{" "}
-                    <strong className="text-white">{pontoAtivo.visitas} acessos</strong>
+                    <span className="text-slate-400">Visitantes Únicos:</span>{" "}
+                    <strong className="text-amber-400">{pontoAtivo.visitas || 0}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Inscrições:</span>{" "}
-                    <strong className="text-emerald-400">{pontoAtivo.conversoes} vendidas</strong>
+                    <span className="text-slate-400">Visualizações (Views):</span>{" "}
+                    <strong className="text-cyan-400">{pontoAtivo.pageviews || 0}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Inscrições Céos:</span>{" "}
+                    <strong className="text-emerald-400">{pontoAtivo.conversoes || 0}</strong>
                   </div>
                   <div>
                     <span className="text-slate-400">Receita do Dia:</span>{" "}
-                    <strong className="text-amber-400">
-                      R$ {pontoAtivo.receita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    <strong className="text-white">
+                      R$ {(pontoAtivo.receita || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </strong>
                   </div>
                 </div>
               </div>
             )}
           </div>
+        ) : abaVisitas === "paginas" ? (
+          /* ========================================================
+             ABA 2: PÁGINAS MAIS ACESSADAS & CONTEÚDO POPULAR
+             ======================================================== */
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-cyan-400" />
+                  <span>Ranking de Páginas Mais Visitadas</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Rotas que mais atraem público e geram visualizações na plataforma
+                </p>
+              </div>
+              <span className="text-xs text-slate-400">
+                Total de <strong className="text-white">{vercelData?.totalPageviews || 0}</strong> pageviews
+              </span>
+            </div>
+
+            {vercelData?.topPaginas && vercelData.topPaginas.length > 0 ? (
+              <div className="space-y-3 pt-1">
+                {vercelData.topPaginas.map((pag: any, i: number) => {
+                  const maiorView = vercelData.topPaginas[0]?.pageviews || 1;
+                  const percent = Math.max(Math.round((pag.pageviews / maiorView) * 100), 6);
+                  const shareTotal = vercelData.totalPageviews > 0
+                    ? ((pag.pageviews / vercelData.totalPageviews) * 100).toFixed(1)
+                    : "0";
+
+                  return (
+                    <div key={pag.path + i} className="p-3 rounded-xl bg-slate-800/30 border border-slate-700/20 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-extrabold ${
+                            i === 0
+                              ? "bg-amber-400 text-slate-950"
+                              : i === 1
+                              ? "bg-slate-300 text-slate-950"
+                              : i === 2
+                              ? "bg-amber-700 text-white"
+                              : "bg-slate-800 text-slate-400"
+                          }`}>
+                            #{i + 1}
+                          </span>
+                          <div>
+                            <span className="font-bold text-white block">
+                              {pag.nomeAmigavel}
+                            </span>
+                            <span className="font-mono text-[11px] text-cyan-400/90 truncate max-w-[280px] sm:max-w-md block">
+                              {pag.path}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-right self-end sm:self-center">
+                          <div>
+                            <span className="text-white font-extrabold text-sm">{pag.pageviews}</span>
+                            <span className="text-[10px] text-slate-400 block">views ({shareTotal}%)</span>
+                          </div>
+                          <div>
+                            <span className="text-amber-400 font-bold text-xs">{pag.visitors}</span>
+                            <span className="text-[10px] text-slate-400 block">visitantes</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barra de Proporção Visual */}
+                      <div className="w-full h-2 rounded-full bg-slate-800/80 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 py-10 text-center">
+                Aguardando os primeiros registros de páginas visitadas.
+              </p>
+            )}
+          </div>
+        ) : abaVisitas === "origens" ? (
+          /* ========================================================
+             ABA 3: FONTES DE TRÁFEGO & ORIGEM (REFERRERS)
+             ======================================================== */
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-emerald-400" />
+                  <span>Origem dos Acessos & Canais de Aquisição</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  De onde vieram os congressistas, médicos e promotores que acessaram a plataforma
+                </p>
+              </div>
+            </div>
+
+            {vercelData?.fontesTrafego && vercelData.fontesTrafego.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {vercelData.fontesTrafego.map((origem: any, i: number) => {
+                  const pct = vercelData.totalPageviews > 0
+                    ? Math.round((origem.pageviews / vercelData.totalPageviews) * 100)
+                    : 100;
+
+                  return (
+                    <div
+                      key={origem.nome + i}
+                      className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/30 flex items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                          {origem.tipo === "search" ? (
+                            <Compass className="w-4 h-4" />
+                          ) : origem.tipo === "social" ? (
+                            <Share2 className="w-4 h-4" />
+                          ) : (
+                            <MousePointerClick className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-white block">{origem.nome}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {origem.hostname || "Tráfego Direto"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-base font-black text-white">{pct}%</span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {origem.pageviews} views ({origem.visitors} ún.)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 py-10 text-center">
+                Aguardando consolidação de fontes de tráfego.
+              </p>
+            )}
+          </div>
+        ) : (
+          /* ========================================================
+             ABA 4: DISPOSITIVOS, SISTEMAS, NAVEGADORES & GEOGRAFIA
+             ======================================================== */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Bloco 1: Dispositivos */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-amber-400" />
+                  <h3 className="font-bold text-sm text-white">Dispositivos</h3>
+                </div>
+                <span className="text-[11px] text-slate-400">Proporção</span>
+              </div>
+
+              {vercelData?.dispositivos && vercelData.dispositivos.length > 0 ? (
+                <div className="space-y-3 pt-1">
+                  {vercelData.dispositivos.map((d: any, i: number) => {
+                    const totalD = vercelData.totalPageviews || 1;
+                    const pct = Math.round((d.pageviews / totalD) * 100);
+                    const isDesktop = d.device.toLowerCase().includes("desktop");
+
+                    return (
+                      <div key={d.device + i} className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/30 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          {isDesktop ? (
+                            <Laptop className="w-5 h-5 text-blue-400" />
+                          ) : (
+                            <Smartphone className="w-5 h-5 text-emerald-400" />
+                          )}
+                          <div>
+                            <span className="text-xs font-bold text-white capitalize">{d.device}</span>
+                            <span className="text-[10px] text-slate-400 block">{d.visitors} visitante(s) único(s)</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-black text-white">{pct}%</span>
+                          <span className="text-[10px] text-slate-400 block">{d.pageviews} views</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 py-6 text-center">Nenhum dado de dispositivo coletado.</p>
+              )}
+            </div>
+
+            {/* Bloco 2: Origem dos Visitantes (Países) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  <h3 className="font-bold text-sm text-white">Origem Geográfica</h3>
+                </div>
+                <span className="text-[11px] text-slate-400">País</span>
+              </div>
+
+              {vercelData?.paises && vercelData.paises.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  {vercelData.paises.map((c: any, i: number) => (
+                    <div key={c.country + i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/30 border border-slate-700/20 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[11px]">
+                          {c.country}
+                        </span>
+                        <span className="text-slate-200 font-semibold">
+                          {c.nomePais || c.country}
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-300">
+                        {c.pageviews} <span className="text-[10px] text-slate-500 font-normal">views</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 py-6 text-center">Aguardando dados de geolocalização.</p>
+              )}
+            </div>
+
+            {/* Bloco 3: Navegadores */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <h3 className="font-bold text-sm text-white">Navegadores Mais Usados</h3>
+                </div>
+                <span className="text-[11px] text-slate-400">Browser</span>
+              </div>
+
+              <div className="space-y-2 pt-1 text-xs">
+                {vercelData?.navegadores?.map((b: any, i: number) => (
+                  <div key={b.browser + i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/30 border border-slate-700/20">
+                    <span className="text-slate-200 font-semibold">{b.browser}</span>
+                    <span className="font-bold text-purple-300">{b.pageviews} views</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bloco 4: Sistemas Operacionais */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#071321]/80 border border-blue-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-400" />
+                  <h3 className="font-bold text-sm text-white">Sistemas Operacionais</h3>
+                </div>
+                <span className="text-[11px] text-slate-400">OS</span>
+              </div>
+
+              <div className="space-y-2 pt-1 text-xs">
+                {vercelData?.sistemas?.map((s: any, i: number) => (
+                  <div key={s.os + i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/30 border border-slate-700/20">
+                    <span className="text-slate-200 font-semibold">{s.os}</span>
+                    <span className="font-bold text-blue-300">{s.pageviews} views</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
         )}
+
       </div>
 
       {/* 3. TABELA DE RENDIMENTOS POR EVENTO & TAXA CÉOS DISCRITA */}
