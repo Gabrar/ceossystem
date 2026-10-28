@@ -7,12 +7,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getEventRegistrationStatus } from "@/lib/eventStatus";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
+import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
 
 export default function EventosPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const { userData } = useAuth();
+  const [modalSubcontaAberto, setModalSubcontaAberto] = useState(false);
+  const statusSubconta = verificarStatusSubconta(userData);
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
@@ -138,15 +144,20 @@ export default function EventosPage() {
               </div>
 
               {(userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor") && (
-                <Link href="/eventos/createEvent">
-                  <button
-                    type="button"
-                    className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Criar evento
-                  </button>
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!statusSubconta.isAtiva) {
+                      setModalSubcontaAberto(true);
+                      return;
+                    }
+                    router.push("/eventos/createEvent");
+                  }}
+                  className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Criar evento
+                </button>
               )}
             </div>
 
@@ -210,6 +221,12 @@ export default function EventosPage() {
         </section>
 
       </div>
+
+      <ModalSubcontaObrigatoria
+        isOpen={modalSubcontaAberto}
+        onClose={() => setModalSubcontaAberto(false)}
+        status={statusSubconta.status}
+      />
     </main>
   );
 }

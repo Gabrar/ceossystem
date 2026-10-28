@@ -12,6 +12,8 @@ import {
   EventoPromotorItem,
   TrabalhoSubmetido,
 } from "@/lib/analytics";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
+import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
 import {
   Loader2,
   BarChart3,
@@ -49,6 +51,9 @@ function AnalyticsContent() {
     userData?.tipoUsuario === "promotor" ||
     userData?.tipo_usuario === "promotor" ||
     userData?.role === "promotor";
+
+  const statusSubconta = verificarStatusSubconta(userData);
+  const [modalSubcontaAberto, setModalSubcontaAberto] = useState(false);
 
   const [eventos, setEventos] = useState<EventoPromotorItem[]>([]);
   const [eventoSelecionado, setEventoSelecionado] = useState<string>("");
@@ -263,13 +268,26 @@ function AnalyticsContent() {
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Para visualizar o analytics e a lista de participantes, você precisa primeiro criar e publicar um evento de sua responsabilidade.
           </p>
-          <Link
-            href="/eventos/createEvent"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+          <button
+            type="button"
+            onClick={() => {
+              if (!statusSubconta.isAtiva) {
+                setModalSubcontaAberto(true);
+                return;
+              }
+              router.push("/eventos/createEvent");
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
           >
             <span>Publicar Meu Primeiro Evento</span>
-          </Link>
+          </button>
         </div>
+
+        <ModalSubcontaObrigatoria
+          isOpen={modalSubcontaAberto}
+          onClose={() => setModalSubcontaAberto(false)}
+          status={statusSubconta.status}
+        />
       </div>
     );
   }
@@ -1118,6 +1136,12 @@ function AnalyticsContent() {
           )}
         </>
       ) : null}
+
+      <ModalSubcontaObrigatoria
+        isOpen={modalSubcontaAberto}
+        onClose={() => setModalSubcontaAberto(false)}
+        status={statusSubconta.status}
+      />
     </div>
   );
 }

@@ -22,16 +22,22 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { collection, getDocs, query, where, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getEventRegistrationStatus, getStatusBadgeConfig } from "@/lib/eventStatus";
 import { buscarEventosInscritosDoUsuario } from "@/lib/inscricoes";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
+import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
 
 export default function MeusEventosPage() {
   const { user, userData } = useAuth();
   const [eventos, setEventos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("Todos");
+
+  const router = useRouter();
+  const [modalSubcontaAberto, setModalSubcontaAberto] = useState(false);
 
   // Estado para modal de exclusão
   const [eventoParaExcluir, setEventoParaExcluir] = useState<any | null>(null);
@@ -41,6 +47,8 @@ export default function MeusEventosPage() {
     userData?.tipoUsuario === "promotor" ||
     userData?.tipo_usuario === "promotor" ||
     userData?.role === "promotor";
+
+  const statusSubconta = verificarStatusSubconta(userData);
 
   const carregarEventos = async () => {
     if (!user) return;
@@ -139,13 +147,20 @@ export default function MeusEventosPage() {
         </div>
 
         {isPromotor && (
-          <Link
-            href="/eventos/createEvent"
+          <button
+            type="button"
+            onClick={() => {
+              if (!statusSubconta.isAtiva) {
+                setModalSubcontaAberto(true);
+                return;
+              }
+              router.push("/eventos/createEvent");
+            }}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/20 transition-all cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Criar Novo Evento</span>
-          </Link>
+          </button>
         )}
       </div>
 
@@ -278,13 +293,20 @@ export default function MeusEventosPage() {
             </p>
           </div>
           {isPromotor ? (
-            <Link
-              href="/eventos/createEvent"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+            <button
+              type="button"
+              onClick={() => {
+                if (!statusSubconta.isAtiva) {
+                  setModalSubcontaAberto(true);
+                  return;
+                }
+                router.push("/eventos/createEvent");
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Publicar Primeiro Evento</span>
-            </Link>
+            </button>
           ) : (
             <Link
               href="/eventos"
@@ -350,6 +372,11 @@ export default function MeusEventosPage() {
         </div>
       )}
 
+      <ModalSubcontaObrigatoria
+        isOpen={modalSubcontaAberto}
+        onClose={() => setModalSubcontaAberto(false)}
+        status={statusSubconta.status}
+      />
     </div>
   );
 }

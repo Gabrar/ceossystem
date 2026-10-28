@@ -7,7 +7,7 @@ import {
     ShieldAlert, ImagePlus, Trash2, Plus, MessageSquare, BookOpen, 
     Landmark, Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle, 
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map,
-    CalendarCheck, AlertCircle, GripVertical
+    CalendarCheck, AlertCircle, GripVertical, Wallet
 } from "lucide-react";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Suspense } from "react";
 import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
 
 function CreateEventContent() {
     const router = useRouter();
@@ -30,6 +31,7 @@ function CreateEventContent() {
     const [loadingExisting, setLoadingExisting] = useState(false);
 
     const isPromotor = userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor";
+    const statusSubconta = verificarStatusSubconta(userData);
 
     useEffect(() => {
         if (!authLoading) {
@@ -556,6 +558,15 @@ function CreateEventContent() {
 
     // --- Salvamento ---
     const handleSaveEvent = async () => {
+        // Bloqueio obrigatório: Promotor deve possuir subconta Asaas ativa para criar novo evento
+        if (!isEditing && isPromotor && !statusSubconta.isAtiva) {
+            alert(
+                "Para poder criar evento, a sua conta no Asaas tem que ser criada primeiro. A criação de eventos só é liberada quando a situação do cadastro estiver completa (conta ativa)."
+            );
+            router.push("/usuario/painel/financeiro");
+            return;
+        }
+
         if (!nomeEvento.trim()) {
             setActiveTab("basicas");
             return alert("Por favor, preencha ao menos o Nome do Evento na aba Básicas.");
@@ -777,6 +788,64 @@ function CreateEventContent() {
                             className="inline-flex items-center justify-center w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-md shadow-blue-600/20 text-center cursor-pointer"
                         >
                             Voltar para Eventos
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    // 4. Promotor sem subconta Asaas ativa tentando CRIAR novo evento
+    if (!isEditing && isPromotor && !statusSubconta.isAtiva) {
+        return (
+            <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex flex-col items-center justify-center p-4">
+                <div className="max-w-lg w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-amber-300 dark:border-amber-500/40 shadow-xl text-center space-y-5 animate-in fade-in">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-800/40 shadow-xs">
+                        <Wallet className="w-7 h-7" />
+                    </div>
+
+                    <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            Etapa Obrigatória para Promotores
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-montserrat font-bold text-slate-900 dark:text-white">
+                            Subconta Asaas Obrigatória
+                        </h2>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs sm:text-sm text-left space-y-2">
+                        <p className="font-semibold leading-relaxed">
+                            Para poder criar evento a conta tem que ser criada no Asaas primeiro.
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                            A criação de novos eventos só é liberada quando a situação do cadastro da conta estiver completa (<strong>conta ativa</strong>).
+                        </p>
+                    </div>
+
+                    <div className="text-xs text-slate-600 dark:text-slate-400 text-left space-y-2 bg-slate-50 dark:bg-[#071321]/60 p-3.5 rounded-xl border border-slate-200 dark:border-blue-900/40">
+                        <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span>Recebimento direto das inscrições na sua conta</span>
+                        </p>
+                        <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span>Ativação simples e rápida através do painel financeiro</span>
+                        </p>
+                    </div>
+
+                    <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                        <Link
+                            href="/usuario/painel/meus-eventos"
+                            className="w-full sm:w-1/2 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all text-center cursor-pointer"
+                        >
+                            Voltar para Painel
+                        </Link>
+                        <Link
+                            href="/usuario/painel/financeiro"
+                            className="w-full sm:w-1/2 inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 text-center cursor-pointer transition-all"
+                        >
+                            <Wallet className="w-4 h-4" />
+                            <span>Criar Subconta Asaas</span>
                         </Link>
                     </div>
                 </div>

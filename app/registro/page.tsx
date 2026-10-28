@@ -151,11 +151,11 @@ export default function RegistroPage() {
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
+        window.location.href = tipoUsuario === "promotor" ? "/usuario/painel/financeiro" : "/";
+      }, 2200);
       return () => clearTimeout(timer);
     }
-  }, [isSuccess]);
+  }, [isSuccess, tipoUsuario]);
 
   // Contador regressivo para reenvio do código (60s)
   useEffect(() => {
@@ -421,10 +421,24 @@ export default function RegistroPage() {
               <h3 className="font-montserrat font-bold text-base text-emerald-800 dark:text-emerald-300">
                 Conta criada com sucesso!
               </h3>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                Aguarde um instante enquanto preparamos seu ambiente...
-              </p>
-              <a href="/" className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 underline">
+              {tipoUsuario === "promotor" ? (
+                <div className="p-3.5 rounded-xl bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/30 text-blue-900 dark:text-blue-200 text-xs text-left space-y-1.5">
+                  <p className="font-bold">
+                    Próximo passo: Ativação da Subconta Asaas
+                  </p>
+                  <p className="text-[11px] text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
+                    Para poder publicar eventos na plataforma, você precisa criar sua subconta no Asaas para recebimento das inscrições. Redirecionando para a área financeira...
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Aguarde um instante enquanto preparamos seu ambiente...
+                </p>
+              )}
+              <a
+                href={tipoUsuario === "promotor" ? "/usuario/painel/financeiro" : "/"}
+                className="mt-3 inline-block text-xs font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 underline"
+              >
                 Clique aqui se não for redirecionado
               </a>
             </div>

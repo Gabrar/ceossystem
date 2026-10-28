@@ -20,8 +20,11 @@ import {
   Loader2,
   Settings,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
+import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
 
 interface PainelLayoutProps {
   children: React.ReactNode;
@@ -115,6 +118,9 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
     userData?.tipoUsuario === "promotor" ||
     userData?.tipo_usuario === "promotor" ||
     userData?.role === "promotor";
+
+  const statusSubconta = verificarStatusSubconta(userData);
+  const [modalSubcontaAberto, setModalSubcontaAberto] = useState(false);
 
   const userName = userData?.nome || user.displayName || user.email?.split("@")[0] || "Usuário";
   const userInitial = userName.charAt(0).toUpperCase();
@@ -212,13 +218,21 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
 
           {/* Botão de Criação Rápida para Promotores */}
           {isPromotor && (
-            <Link
-              href="/eventos/createEvent"
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                if (!statusSubconta.isAtiva) {
+                  setModalSubcontaAberto(true);
+                  return;
+                }
+                router.push("/eventos/createEvent");
+              }}
               className="mt-4 w-full py-2.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Criar Novo Evento</span>
-            </Link>
+            </button>
           )}
         </div>
 
@@ -302,10 +316,42 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
       {/* ÁREA DE CONTEÚDO PRINCIPAL DO PAINEL */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-200">
+          {/* BANNER DE ALERTA SE PROMOTOR NÃO POSSUIR SUBCONTA ATIVA */}
+          {isPromotor && !statusSubconta.isAtiva && pathname !== "/usuario/painel/financeiro" && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-montserrat font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                    Subconta Asaas Obrigatória para Criar Eventos
+                  </h4>
+                  <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                    Antes de publicar eventos, crie sua subconta no Asaas. A criação de novos eventos só é liberada quando o cadastro estiver completo (conta ativa).
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/usuario/painel/financeiro"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all shrink-0 self-stretch sm:self-auto justify-center"
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Configurar Subconta</span>
+              </Link>
+            </div>
+          )}
+
           {children}
         </div>
       </main>
 
+      <ModalSubcontaObrigatoria
+        isOpen={modalSubcontaAberto}
+        onClose={() => setModalSubcontaAberto(false)}
+        status={statusSubconta.status}
+      />
     </div>
   );
 }

@@ -19,8 +19,11 @@ import {
   BookOpen
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { verificarStatusSubconta } from "@/lib/subcontaUtils";
+import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
 import {
   buscarInscricoesDoUsuario,
   buscarEventosInscritosDoUsuario,
@@ -38,10 +41,15 @@ export default function DashboardPage() {
   const [certificadosCount, setCertificadosCount] = useState<number>(0);
   const [trabalhosCount, setTrabalhosCount] = useState<number>(0);
 
+  const router = useRouter();
+  const [modalSubcontaAberto, setModalSubcontaAberto] = useState(false);
+
   const isPromotor =
     userData?.tipoUsuario === "promotor" ||
     userData?.tipo_usuario === "promotor" ||
     userData?.role === "promotor";
+
+  const statusSubconta = verificarStatusSubconta(userData);
 
   const userName = userData?.nome || user?.displayName || "Congressista";
 
@@ -195,13 +203,20 @@ export default function DashboardPage() {
 
           <div className="pt-2 flex flex-wrap gap-3">
             {isPromotor && (
-              <Link
-                href="/eventos/createEvent"
+              <button
+                type="button"
+                onClick={() => {
+                  if (!statusSubconta.isAtiva) {
+                    setModalSubcontaAberto(true);
+                    return;
+                  }
+                  router.push("/eventos/createEvent");
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Criar Novo Evento</span>
-              </Link>
+              </button>
             )}
 
             <Link
@@ -434,6 +449,11 @@ export default function DashboardPage() {
 
       </div>
 
+      <ModalSubcontaObrigatoria
+        isOpen={modalSubcontaAberto}
+        onClose={() => setModalSubcontaAberto(false)}
+        status={statusSubconta.status}
+      />
     </div>
   );
 }
