@@ -1515,10 +1515,7 @@ export default function FinanceiroPage() {
           {/* BANNER INFORMATIVO */}
           <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0c2340] to-[#123868] text-white border border-blue-900/50 shadow-xl relative overflow-hidden">
             <div className="max-w-2xl space-y-3 relative z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-200 border border-blue-400/30">
-                <SparklesIcon className="w-3.5 h-3.5" />
-                <span>Integração Asaas White Label</span>
-              </span>
+              
               <h2 className="text-xl sm:text-2xl font-montserrat font-extrabold leading-tight">
                 Ative sua Conta de Recebimentos Asaas
               </h2>

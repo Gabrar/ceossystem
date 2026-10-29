@@ -799,13 +799,13 @@ function CreateEventContent() {
     if (!isEditing && isPromotor && !statusSubconta.isAtiva) {
         return (
             <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex flex-col items-center justify-center p-4">
-                <div className="max-w-lg w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-amber-300 dark:border-amber-500/40 shadow-xl text-center space-y-5 animate-in fade-in">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-800/40 shadow-xs">
+                <div className="max-w-lg w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 text-center space-y-5 animate-in fade-in">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-200 dark:border-blue-800/40 shadow-xs">
                         <Wallet className="w-7 h-7" />
                     </div>
 
                     <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
                             Etapa Obrigatória para Promotores
                         </span>
                         <h2 className="text-xl sm:text-2xl font-montserrat font-bold text-slate-900 dark:text-white">
@@ -813,22 +813,22 @@ function CreateEventContent() {
                         </h2>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs sm:text-sm text-left space-y-2">
-                        <p className="font-semibold leading-relaxed">
+                    <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 text-slate-900 dark:text-slate-100 text-xs sm:text-sm text-left space-y-2">
+                        <p className="font-semibold leading-relaxed text-blue-950 dark:text-blue-100">
                             Para poder criar evento a conta tem que ser criada no Asaas primeiro.
                         </p>
-                        <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                        <p className="text-[11px] sm:text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                             A criação de novos eventos só é liberada quando a situação do cadastro da conta estiver completa (<strong>conta ativa</strong>).
                         </p>
                     </div>
 
                     <div className="text-xs text-slate-600 dark:text-slate-400 text-left space-y-2 bg-slate-50 dark:bg-[#071321]/60 p-3.5 rounded-xl border border-slate-200 dark:border-blue-900/40">
                         <p className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
                             <span>Recebimento direto das inscrições na sua conta</span>
                         </p>
                         <p className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
                             <span>Ativação simples e rápida através do painel financeiro</span>
                         </p>
                     </div>

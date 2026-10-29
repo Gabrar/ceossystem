@@ -70,11 +70,11 @@ export default function ModalSubcontaObrigatoria({
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#0c1e33] border border-amber-300/80 dark:border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-amber-500/10 space-y-6 overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/50 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-500/10 space-y-6 overflow-hidden">
         {/* Detalhe de iluminação suave no topo */}
         <div
           aria-hidden="true"
-          className="absolute -top-16 -right-16 w-44 h-44 bg-amber-500/15 dark:bg-amber-400/10 rounded-full blur-3xl pointer-events-none"
+          className="absolute -top-16 -right-16 w-44 h-44 bg-blue-500/15 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none"
         />
 
         {/* Botão Fechar */}
@@ -89,13 +89,13 @@ export default function ModalSubcontaObrigatoria({
 
         {/* Header com Ícone e Título */}
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
             <ShieldAlert className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
 
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-              <Lock className="w-3 h-3" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
+              <Lock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
               <span>Obrigatório para Promotores</span>
             </div>
 
@@ -114,14 +114,14 @@ export default function ModalSubcontaObrigatoria({
         </div>
 
         {/* Mensagem Principal */}
-        <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/25 text-amber-900 dark:text-amber-200 space-y-2">
-          <p className="text-xs sm:text-sm font-semibold leading-relaxed">
+        <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 text-slate-900 dark:text-slate-100 space-y-2">
+          <p className="text-xs sm:text-sm font-semibold leading-relaxed text-blue-950 dark:text-blue-100">
             {mensagemCustom ||
               (isEncerrada
                 ? "Sua subconta no Asaas consta como desvinculada ou cancelada. Para poder criar eventos, é necessário configurar uma nova subconta ativa."
                 : "Para poder criar eventos na plataforma, é obrigatório criar a sua subconta no Asaas para o recebimento das inscrições.")}
           </p>
-          <p className="text-[11px] sm:text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+          <p className="text-[11px] sm:text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
             A criação de novos eventos só é liberada quando a situação do cadastro da sua conta estiver completa (<strong>conta ativa</strong>).
           </p>
         </div>
@@ -129,21 +129,21 @@ export default function ModalSubcontaObrigatoria({
         {/* Motivos / Benefícios */}
         <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
           <div className="flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <span>
               <strong>Recebimento Direto:</strong> As vendas de ingressos via Pix, Cartão e Boleto caem diretamente na sua carteira.
             </span>
           </div>
 
           <div className="flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <span>
               <strong>Divisão Automática:</strong> A taxa da plataforma é repassada com total transparência e sem cobranças manuais.
             </span>
           </div>
 
           <div className="flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <span>
               <strong>Liberação Automática:</strong> Assim que cadastrada no painel financeiro, a publicação de eventos é liberada na hora.
             </span>
@@ -163,7 +163,7 @@ export default function ModalSubcontaObrigatoria({
           <button
             type="button"
             onClick={handleIrParaFinanceiro}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/25 transition-all cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/25 transition-all cursor-pointer"
           >
             <Wallet className="w-4 h-4" />
             <span>
