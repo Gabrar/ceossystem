@@ -646,17 +646,17 @@ export default function FinanceiroPage() {
   if (!isPromotor) {
     return (
       <div className="p-6 sm:p-8 max-w-4xl mx-auto">
-        <div className="p-6 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+        <div className="p-6 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 text-blue-950 dark:text-blue-100 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
           <div>
             <h3 className="font-bold text-sm">Acesso Restrito a Promotores</h3>
-            <p className="text-xs mt-1 text-amber-800 dark:text-amber-300">
+            <p className="text-xs mt-1 text-blue-800/80 dark:text-blue-300/80">
               A gestão de subcontas Asaas e faturamento é exclusiva para organizadores de eventos
               cadastrados na plataforma.
             </p>
             <Link
               href="/usuario/painel/dashboard"
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200 underline"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               Voltar ao Dashboard
             </Link>
@@ -748,7 +748,7 @@ export default function FinanceiroPage() {
           )}
 
           {/* BANNER DE STATUS CONECTADO */}
-          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-900/20 via-indigo-900/20 to-blue-950/30 border border-blue-500/20 dark:border-blue-800/40 backdrop-blur-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-blue-950/30 border border-blue-200/80 dark:border-blue-800/40 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className={`w-12 h-12 rounded-2xl ${subconta.contaEncerrada || subconta.status === "ENCERRADA" ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"} border flex items-center justify-center shrink-0`}>
                 <ShieldCheck className="w-6 h-6" />
@@ -839,10 +839,10 @@ export default function FinanceiroPage() {
               </span>
             </div>
           ) : (
-            <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/30 dark:border-amber-500/20 space-y-4 shadow-xs">
+            <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border border-blue-500/30 dark:border-blue-500/20 space-y-4 shadow-xs">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start sm:items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                     <ShieldAlert className="w-5 h-5" />
                   </div>
                   <div>
@@ -850,7 +850,7 @@ export default function FinanceiroPage() {
                       <h3 className="font-montserrat font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                         Validação de Identidade Obrigatória (SMS, Documento & Biometria)
                       </h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/30">
                         Ativação do Pix
                       </span>
                     </div>
@@ -1138,15 +1138,15 @@ export default function FinanceiroPage() {
 
               {/* ALERTA DE VALIDAÇÃO DE IDENTIDADE PARA OPERAÇÕES PIX */}
               {subconta.precisaVerificacao && (
-                <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-transparent border border-blue-200/80 dark:border-blue-800/40 text-blue-950 dark:text-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-start gap-3.5">
-                    <span className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                    <span className="p-2.5 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 shrink-0">
                       <ShieldAlert className="w-5 h-5" />
                     </span>
                     <div>
                       <h4 className="font-montserrat font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
                         <span>Validação de Identidade Necessária para Transferências Pix</span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold uppercase">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/15 text-blue-700 dark:text-blue-300 font-semibold uppercase">
                           Exigência BACEN
                         </span>
                       </h4>
@@ -1158,7 +1158,7 @@ export default function FinanceiroPage() {
                   <button
                     type="button"
                     onClick={() => setModalValidacaoAberto(true)}
-                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md shadow-amber-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all self-start md:self-auto"
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all self-start md:self-auto"
                   >
                     <HelpCircle className="w-4 h-4" />
                     <span>Como Validar Conta (Passo a Passo)</span>
@@ -1167,7 +1167,7 @@ export default function FinanceiroPage() {
               )}
 
               {/* CARD DE SALDO DISPONÍVEL */}
-              <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-900/25 via-indigo-900/20 to-blue-950/30 border border-blue-500/20 dark:border-blue-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white dark:from-blue-900/25 dark:via-indigo-900/20 dark:to-blue-950/30 border border-blue-200/80 dark:border-blue-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
                 <div>
                   <span className="text-[11px] uppercase tracking-wider font-bold text-slate-400">Saldo Disponível para Saque Pix</span>
                   <p className="mt-1 text-2xl sm:text-3xl font-montserrat font-extrabold text-slate-900 dark:text-white">
@@ -1513,9 +1513,12 @@ export default function FinanceiroPage() {
         /* CASO 2: O PROMOTOR AINDA NÃO TEM SUBCONTA -> ONBOARDING PROFISSIONAL */
         <div className="space-y-6">
           {/* BANNER INFORMATIVO */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0c2340] to-[#123868] text-white border border-blue-900/50 shadow-xl relative overflow-hidden">
+          <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-xl shadow-blue-500/15 border border-blue-500/20 overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="absolute -right-12 -top-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"
+            />
             <div className="max-w-2xl space-y-3 relative z-10">
-              
               <h2 className="text-xl sm:text-2xl font-montserrat font-extrabold leading-tight">
                 Ative sua Conta de Recebimentos Asaas
               </h2>

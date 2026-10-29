@@ -70,12 +70,12 @@ export default function ThemeToggle() {
           ? "Alternar para Modo Claro"
           : "Alternar para Modo Escuro"
       }
-      className="relative p-2 sm:px-3 sm:py-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-blue-400/20 dark:border-blue-400/20 bg-white/10 hover:bg-white/15 dark:bg-slate-800/60 dark:hover:bg-slate-700/80 text-blue-100 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
+      className="relative p-2 sm:px-3 sm:py-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-blue-400/20 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/80 text-slate-700 dark:text-blue-100 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
     >
       <div className="relative w-4 h-4 sm:w-[18px] sm:h-[18px] flex items-center justify-center">
         {/* Ícone Sol (Modo Claro) */}
         <Sun
-          className={`w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-300 transition-all duration-300 ${
+          className={`w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500 transition-all duration-300 ${
             mounted && theme === "light"
               ? "rotate-0 scale-100 opacity-100"
               : "-rotate-90 scale-0 opacity-0 absolute"
@@ -91,7 +91,7 @@ export default function ThemeToggle() {
         />
       </div>
 
-      <span className="hidden md:inline text-xs font-medium text-blue-100/90 group-hover:text-white transition-colors">
+      <span className="hidden md:inline text-xs font-semibold text-slate-700 group-hover:text-blue-600 dark:text-blue-100/90 dark:group-hover:text-white transition-colors">
         {!mounted ? "Tema" : theme === "dark" ? "Escuro" : "Claro"}
       </span>
     </button>

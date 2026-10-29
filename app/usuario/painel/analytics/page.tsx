@@ -223,7 +223,7 @@ function AnalyticsContent() {
   if (!isPromotor) {
     return (
       <div className="p-8 max-w-xl mx-auto text-center bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl space-y-4 shadow-sm my-12">
-        <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
           <ShieldAlert className="w-6 h-6" />
         </div>
         <h2 className="font-montserrat font-bold text-xl text-slate-900 dark:text-white">
