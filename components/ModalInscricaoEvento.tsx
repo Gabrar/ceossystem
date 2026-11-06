@@ -28,6 +28,16 @@ interface ModalInscricaoEventoProps {
     titulo: string;
     data?: string;
     lotes?: LoteItem[];
+    minicursos?: Array<{
+      nome: string;
+      tipo?: string;
+      local?: string;
+      dias?: Array<{ data: string; horaInicio: string; horaFim: string }>;
+    }>;
+    submissaoTrabalhos?: {
+      areasAvaliacao?: string[];
+      eixosTematicos?: Array<{ nome: string; descricao?: string } | string>;
+    } | null;
   };
   user: any;
   userData: any;
@@ -121,7 +131,33 @@ export default function ModalInscricaoEvento({
   const [qualificacaoTecnico, setQualificacaoTecnico] = useState("");
   const [descricaoPerfilOutro, setDescricaoPerfilOutro] = useState("");
   const [desejoAvaliador, setDesejoAvaliador] = useState(false);
+  const [areasInteresseAvaliador, setAreasInteresseAvaliador] = useState<string[]>([]);
+  const [minicursosSelecionados, setMinicursosSelecionados] = useState<string[]>([]);
   const [certificadoMatriculaNome, setCertificadoMatriculaNome] = useState<string | null>(null);
+
+  const areasEventoConfiguradas: string[] = (
+    evento?.submissaoTrabalhos?.areasAvaliacao && evento.submissaoTrabalhos.areasAvaliacao.length > 0
+      ? evento.submissaoTrabalhos.areasAvaliacao
+      : evento?.submissaoTrabalhos?.eixosTematicos && evento.submissaoTrabalhos.eixosTematicos.length > 0
+      ? evento.submissaoTrabalhos.eixosTematicos.map((e: any) => (typeof e === "string" ? e : e.nome))
+      : []
+  ).filter(Boolean);
+
+  const opcoesAreas = areasEventoConfiguradas.length > 0 ? areasEventoConfiguradas : AREAS_CNPQ;
+
+  const toggleAreaAvaliador = (areaNome: string) => {
+    setAreasInteresseAvaliador((prev) =>
+      prev.includes(areaNome) ? prev.filter((a) => a !== areaNome) : [...prev, areaNome]
+    );
+  };
+
+  const toggleMinicursoInscricao = (nomeMinicurso: string) => {
+    setMinicursosSelecionados((prev) =>
+      prev.includes(nomeMinicurso)
+        ? prev.filter((m) => m !== nomeMinicurso)
+        : [...prev, nomeMinicurso]
+    );
+  };
 
   // Estados de controle
   const [buscandoCep, setBuscandoCep] = useState(false);
@@ -273,6 +309,15 @@ export default function ModalInscricaoEvento({
         qualificacao: tipoParticipante === "Professor" ? qualificacaoProfessor : tipoParticipante === "TÉCNICO" ? qualificacaoTecnico : undefined,
         descricaoPerfil: tipoParticipante === "OUTRO" ? descricaoPerfilOutro : undefined,
         desejoAvaliador: (tipoParticipante === "Professor" || tipoParticipante === "TÉCNICO" || tipoParticipante === "PROFISSIONAL" || tipoParticipante === "ALUNO PÓS-GRADUAÇÃO" || tipoParticipante === "OUTRO") ? desejoAvaliador : false,
+        areasInteresseAvaliador:
+          desejoAvaliador
+            ? areasInteresseAvaliador.length > 0
+              ? areasInteresseAvaliador
+              : areaAtuacao
+              ? [areaAtuacao]
+              : []
+            : [],
+        minicursosSelecionados,
       };
 
       const res = await fetch("/api/asaas/criar-cobranca", {
@@ -913,10 +958,73 @@ export default function ModalInscricaoEvento({
           )}
 
           <datalist id="areas-cnpq">
-            {AREAS_CNPQ.map((a) => (
+            {opcoesAreas.map((a) => (
               <option key={a} value={a} />
             ))}
           </datalist>
+
+          {/* Áreas de Avaliação do Evento para Avaliadores/Professores */}
+          {desejoAvaliador && (
+            <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-[#071321] space-y-2">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                Selecione sua(s) Área(s) de Interesse para Avaliação (mesmas áreas de submissão do evento):
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {opcoesAreas.map((areaItem) => {
+                  const marcada = areasInteresseAvaliador.includes(areaItem);
+                  return (
+                    <button
+                      key={areaItem}
+                      type="button"
+                      onClick={() => toggleAreaAvaliador(areaItem)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        marcada
+                          ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                          : "bg-white dark:bg-[#0c1e33] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-blue-900/50 hover:border-blue-400"
+                      }`}
+                    >
+                      {marcada ? `✓ ${areaItem}` : areaItem}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Seleção de Minicursos/Cursos (usada para evitar choque com apresentações de trabalhos) */}
+          {evento?.minicursos && evento.minicursos.length > 0 && (
+            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-blue-900/50 bg-slate-50/60 dark:bg-[#071321]/60 space-y-2">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                Cursos / Minicursos de Interesse (Opcional):
+              </label>
+              <div className="space-y-1.5">
+                {evento.minicursos.map((mc, idx) => {
+                  const selecionado = minicursosSelecionados.includes(mc.nome);
+                  const horariosStr = (mc.dias || [])
+                    .map((d) => `${d.data ? d.data.split("-").reverse().join("/") : ""} ${d.horaInicio || ""}-${d.horaFim || ""}`)
+                    .filter(Boolean)
+                    .join(" | ");
+                  return (
+                    <label
+                      key={idx}
+                      className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selecionado}
+                        onChange={() => toggleMinicursoInscricao(mc.nome)}
+                        className="mt-0.5 rounded text-blue-600"
+                      />
+                      <span>
+                        <strong>{mc.nome}</strong>
+                        {horariosStr ? <span className="text-slate-500"> ({horariosStr})</span> : null}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tipo de Ingresso / Lote */}
           <div>

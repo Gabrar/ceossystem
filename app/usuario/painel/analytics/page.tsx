@@ -14,6 +14,16 @@ import {
 } from "@/lib/analytics";
 import { verificarStatusSubconta } from "@/lib/subcontaUtils";
 import ModalSubcontaObrigatoria from "@/components/ModalSubcontaObrigatoria";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import {
+  AvaliadorEvento,
+  HorarioOcupadoParticipante,
+  selecionarAvaliadoresPorArea,
+  distribuirTrabalhosNosPeriodos,
+  calcularNotaRanking,
+  isTrabalhoAceito,
+} from "@/lib/trabalhos";
 import {
   Loader2,
   BarChart3,
@@ -39,6 +49,7 @@ import {
   FileText,
   Eye,
   BookOpen,
+  Trophy,
 } from "lucide-react";
 
 function AnalyticsContent() {
@@ -70,6 +81,192 @@ function AnalyticsContent() {
 
   const [activeTab, setActiveTab] = useState<"analytics" | "trabalhos">("analytics");
   const [trabalhoParecer, setTrabalhoParecer] = useState<TrabalhoSubmetido | null>(null);
+  const [distribuindoTrabalhos, setDistribuindoTrabalhos] = useState(false);
+  const [modoRankingAnalytics, setModoRankingAnalytics] = useState<
+    "media_pre_e_apresentacao" | "soma_pre_e_apresentacao" | "apenas_apresentacao" | "apenas_pre_congresso"
+  >("media_pre_e_apresentacao");
+  const [decisaoModal, setDecisaoModal] = useState<"Aceito" | "Aceito com ressalvas" | "Recusado">("Aceito");
+  const [notaPreModal, setNotaPreModal] = useState("9.0");
+  const [parecerModalTexto, setParecerModalTexto] = useState("");
+  const [salvandoParecerModal, setSalvandoParecerModal] = useState(false);
+
+  const handleDistribuirTrabalhosNoAnalytics = async () => {
+    if (!analytics || !eventoSelecionado) return;
+    if (!analytics.trabalhos || analytics.trabalhos.length === 0) {
+      alert("Nenhum trabalho submetido neste evento para distribuir.");
+      return;
+    }
+    setDistribuindoTrabalhos(true);
+    try {
+      const st = analytics.submissaoTrabalhos || {};
+      const qtdAvs = [1, 2, 3].includes(Number(st.qtdAvaliadoresPorResumo))
+        ? Number(st.qtdAvaliadoresPorResumo)
+        : 1;
+
+      // 1. Monta lista de avaliadores disponíveis (comissão + inscritos com desejoAvaliador)
+      const avaliadoresDisp: AvaliadorEvento[] = [];
+      if (Array.isArray(st.avaliadoresComissao)) {
+        st.avaliadoresComissao.forEach((av: any, idx: number) => {
+          if (av && av.email) {
+            avaliadoresDisp.push({
+              id: av.id || String(idx),
+              nome: av.nome || av.email,
+              email: av.email,
+              areasInteresse: Array.isArray(av.areasInteresse) ? av.areasInteresse : [],
+            });
+          }
+        });
+      }
+      analytics.participantes.forEach((p) => {
+        const raw = p.raw || {};
+        if (raw.desejoAvaliador === true && p.email) {
+          if (!avaliadoresDisp.some((a) => a.email.toLowerCase() === p.email.toLowerCase())) {
+            avaliadoresDisp.push({
+              id: p.id,
+              nome: p.nome,
+              email: p.email,
+              areasInteresse: Array.isArray(raw.areasInteresseAvaliador) ? raw.areasInteresseAvaliador : [],
+            });
+          }
+        }
+      });
+
+      const cargaAtual: Record<string, number> = {};
+      let qtdDesignados = 0;
+
+      for (const t of analytics.trabalhos) {
+        const rawT = t.raw || {};
+        if (!Array.isArray(rawT.avaliadoresDesignadosEmails) || rawT.avaliadoresDesignadosEmails.length === 0) {
+          const selecionados = selecionarAvaliadoresPorArea(
+            t.eixoTematico,
+            avaliadoresDisp,
+            qtdAvs,
+            t.userEmail || "",
+            cargaAtual
+          );
+          if (selecionados.length > 0) {
+            selecionados.forEach((s) => {
+              const em = s.email.toLowerCase();
+              cargaAtual[em] = (cargaAtual[em] || 0) + 1;
+            });
+            await updateDoc(doc(db, "trabalhos", t.id), {
+              avaliadoresDesignadosEmails: selecionados.map((s) => s.email),
+              avaliadoresDesignadosNomes: selecionados.map((s) => s.nome),
+              avaliadorEmail: selecionados[0].email,
+              avaliadorNome: selecionados[0].nome,
+              updatedAt: new Date().toISOString(),
+            });
+            qtdDesignados++;
+          }
+        }
+      }
+
+      // 2. Distribui trabalhos aceitos nos dias/horários sem choque com minicursos
+      const aceitosRaw = analytics.trabalhos
+        .filter((t) => isTrabalhoAceito(t.status))
+        .map((t) => t.raw || t);
+      const diasConf = st.avaliacaoDia?.dias || [];
+      let qtdHorarios = 0;
+
+      if (aceitosRaw.length > 0 && diasConf.length > 0) {
+        const ocupacoesPorEmail: Record<string, HorarioOcupadoParticipante[]> = {};
+        const listaMinicursos = analytics.minicursos || [];
+
+        analytics.participantes.forEach((p) => {
+          const raw = p.raw || {};
+          const emailPart = (p.email || "").trim().toLowerCase();
+          const cursosInsc: string[] = Array.isArray(raw.minicursosSelecionados)
+            ? raw.minicursosSelecionados
+            : [];
+          if (emailPart && cursosInsc.length > 0) {
+            cursosInsc.forEach((nomeCurso) => {
+              const cursoObj = listaMinicursos.find(
+                (m: any) => (m.nome || "").trim().toLowerCase() === nomeCurso.trim().toLowerCase()
+              );
+              if (cursoObj && Array.isArray(cursoObj.dias)) {
+                cursoObj.dias.forEach((diaCurso: any) => {
+                  if (diaCurso.data && diaCurso.horaInicio && diaCurso.horaFim) {
+                    if (!ocupacoesPorEmail[emailPart]) ocupacoesPorEmail[emailPart] = [];
+                    ocupacoesPorEmail[emailPart].push({
+                      data: diaCurso.data,
+                      horaInicio: diaCurso.horaInicio,
+                      horaFim: diaCurso.horaFim,
+                      descricao: `Minicurso: ${cursoObj.nome}`,
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        const dist = distribuirTrabalhosNosPeriodos(
+          aceitosRaw,
+          diasConf,
+          Number(st.avaliacaoDia?.oral?.tempoMinutos) || 15,
+          Number(st.avaliacaoDia?.banner?.qtdPorPeriodo) || 50,
+          ocupacoesPorEmail
+        );
+
+        for (const item of dist.atualizados) {
+          await updateDoc(doc(db, "trabalhos", item.id), {
+            modalidadeApresentacao: item.modalidadeApresentacao,
+            apresentacaoDiaId: item.apresentacaoDiaId,
+            apresentacaoDiaLabel: item.apresentacaoDiaLabel,
+            apresentacaoData: item.apresentacaoData,
+            apresentacaoHoraInicio: item.apresentacaoHoraInicio,
+            apresentacaoHoraFim: item.apresentacaoHoraFim,
+            apresentacaoLocal: item.apresentacaoLocal,
+            conflitoMinicursoEvitado: item.conflitoMinicursoEvitado,
+            updatedAt: new Date().toISOString(),
+          });
+          qtdHorarios++;
+        }
+      }
+
+      const novosDados = await buscarAnalyticsDoEvento(eventoSelecionado, user || undefined);
+      setAnalytics(novosDados);
+      alert(
+        `Distribuição concluída! ${qtdDesignados} resumo(s) encaminhado(s) para avaliadores da mesma área e ${qtdHorarios} trabalho(s) aceito(s) alocado(s) nos horários sem choque com cursos.`
+      );
+    } catch (e) {
+      console.error("Erro ao distribuir trabalhos:", e);
+      alert("Erro ao distribuir trabalhos.");
+    } finally {
+      setDistribuindoTrabalhos(false);
+    }
+  };
+
+  const handleSalvarParecerNoAnalytics = async () => {
+    if (!trabalhoParecer || !eventoSelecionado) return;
+    const notaNum =
+      decisaoModal === "Aceito" && notaPreModal.trim() !== ""
+        ? parseFloat(notaPreModal.replace(",", "."))
+        : null;
+    setSalvandoParecerModal(true);
+    try {
+      const payload: any = {
+        status: decisaoModal,
+        parecerAvaliador: parecerModalTexto.trim(),
+        parecer: parecerModalTexto.trim(),
+        notaPreCongresso: notaNum,
+        updatedAt: new Date().toISOString(),
+      };
+      if (decisaoModal === "Aceito com ressalvas") {
+        payload.avaliadorRessalvaEmail = user?.email || "";
+        payload.avaliadorRessalvaNome = userData?.nome || "Comissão Científica";
+      }
+      await updateDoc(doc(db, "trabalhos", trabalhoParecer.id), payload);
+      const novosDados = await buscarAnalyticsDoEvento(eventoSelecionado, user || undefined);
+      setAnalytics(novosDados);
+      setTrabalhoParecer(null);
+    } catch (e) {
+      console.error("Erro ao salvar avaliação:", e);
+      alert("Erro ao salvar parecer do trabalho.");
+    } finally {
+      setSalvandoParecerModal(false);
+    }
+  };
 
   // 1. Carrega estritamente os eventos pertencentes ao promotor logado
   useEffect(() => {
@@ -907,122 +1104,255 @@ function AnalyticsContent() {
                     Gestão de Trabalhos Científicos
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Visualize os trabalhos submetidos e distribua-os para a banca avaliadora.
+                    Visualize os resumos submetidos, avalie, distribua para a banca por área e gere o ranking de notas.
                   </p>
                 </div>
-                
-                <button
-                  type="button"
-                  onClick={() => alert("Lógica de distribuição de trabalhos será implementada em breve.")}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm shadow-blue-600/20 transition-all cursor-pointer self-start sm:self-center"
-                  title="Distribuir trabalhos para os avaliadores"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Distribuir Trabalhos</span>
-                </button>
+
+                <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                  <button
+                    type="button"
+                    onClick={handleDistribuirTrabalhosNoAnalytics}
+                    disabled={distribuindoTrabalhos}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-60"
+                    title="Distribuir trabalhos para os avaliadores da mesma área e alocar horários sem choque com minicursos"
+                  >
+                    {distribuindoTrabalhos ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
+                    <span>{distribuindoTrabalhos ? "Distribuindo..." : "Distribuir Trabalhos"}</span>
+                  </button>
+                </div>
               </div>
 
               {/* LISTA DE TRABALHOS */}
               {analytics.trabalhos && analytics.trabalhos.length > 0 ? (
-                analytics.trabalhos.map((trabalho) => (
-                  <div
-                    key={trabalho.id}
-                    className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6"
-                  >
-                    <div className="space-y-3 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            trabalho.status.includes("Aprovado")
-                              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
-                              : trabalho.status.includes("Corre") || trabalho.status.includes("Ressalva")
-                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40"
-                              : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40"
-                          }`}
-                        >
-                          {trabalho.status.includes("Aprovado") ? (
-                            <CheckCircle2 className="w-3 h-3" />
-                          ) : (
-                            <Clock className="w-3 h-3" />
+                <div className="space-y-4">
+                  {analytics.trabalhos.map((trabalho) => (
+                    <div
+                      key={trabalho.id}
+                      className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/40 shadow-xs hover:shadow-md transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6"
+                    >
+                      <div className="space-y-3 flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              isTrabalhoAceito(trabalho.status)
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
+                                : trabalho.status.includes("Corre") || trabalho.status.toLowerCase().includes("ressalva")
+                                  ? "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40"
+                                  : trabalho.status.toLowerCase().includes("recusado") || trabalho.status.toLowerCase().includes("reprovado")
+                                    ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40"
+                                    : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40"
+                            }`}
+                          >
+                            {isTrabalhoAceito(trabalho.status) ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            <span>{trabalho.status}</span>
+                          </span>
+
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                            {trabalho.eixoTematico}
+                          </span>
+
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {trabalho.tipoResumo === "expandido" ? "Resumo Expandido" : "Resumo Simples"}
+                          </span>
+
+                          {trabalho.modalidadeApresentacao && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                              Apresentação: {trabalho.modalidadeApresentacao}
+                            </span>
                           )}
-                          <span>{trabalho.status}</span>
-                        </span>
-
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                          {trabalho.eixoTematico}
-                        </span>
-
-                        <span className="text-xs text-slate-400 font-mono">
-                          ID: {trabalho.id}
-                        </span>
-                      </div>
-
-                      <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
-                        {trabalho.titulo}
-                      </h3>
-
-                      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                        <p>
-                          <strong className="text-slate-700 dark:text-slate-300">Autores: </strong>
-                          {trabalho.autores}
-                        </p>
-                        <p>
-                          Submetido em {trabalho.dataSubmissao}
-                          {trabalho.nota && trabalho.nota !== "-" && ` • Nota: ${trabalho.nota}`}
-                        </p>
-                      </div>
-
-                      {trabalho.arquivoUrl && (
-                        <div className="pt-1">
-                          <div className="inline-flex items-center gap-3 p-2.5 px-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-xs">
-                            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-[10px] uppercase shadow-xs shrink-0">
-                              PDF
-                            </div>
-                            <div className="min-w-0 pr-2">
-                              <p className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px] sm:max-w-xs">
-                                {trabalho.arquivoNome || "Artigo_Cientifico.pdf"}
-                              </p>
-                              {trabalho.arquivoTamanho && (
-                                <p className="text-[11px] text-slate-400">{trabalho.arquivoTamanho}</p>
-                              )}
-                            </div>
-                            <a
-                              href={trabalho.arquivoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-colors cursor-pointer shrink-0"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>Visualizar PDF</span>
-                            </a>
-                          </div>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-blue-900/30">
-                      {trabalho.arquivoUrl && (
-                        <a
-                          href={trabalho.arquivoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download={trabalho.arquivoNome || "Trabalho_Cientifico.pdf"}
-                          className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+                        <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                          {trabalho.titulo}
+                        </h3>
+
+                        <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                          <p>
+                            <strong className="text-slate-700 dark:text-slate-300">Autores: </strong>
+                            {trabalho.autores}
+                          </p>
+                          <p>
+                            Submetido em {trabalho.dataSubmissao}
+                            {trabalho.notaPreCongresso !== null && trabalho.notaPreCongresso !== undefined
+                              ? ` • Nota Pré-Congresso: ${Number(trabalho.notaPreCongresso).toFixed(1)}`
+                              : ""}
+                            {trabalho.notaDiaMedia !== null && trabalho.notaDiaMedia !== undefined
+                              ? ` • Nota Apresentação: ${Number(trabalho.notaDiaMedia).toFixed(2)}`
+                              : ""}
+                          </p>
+                          {trabalho.avaliadoresDesignadosNomes && trabalho.avaliadoresDesignadosNomes.length > 0 && (
+                            <p className="text-blue-600 dark:text-blue-400 font-medium">
+                              Avaliador(es) na Área: {trabalho.avaliadoresDesignadosNomes.join(", ")}
+                            </p>
+                          )}
+                          {trabalho.apresentacaoDiaLabel && (
+                            <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              📅 Horário Distribuído: {trabalho.apresentacaoDiaLabel} • {trabalho.apresentacaoHoraInicio} às {trabalho.apresentacaoHoraFim}
+                              {trabalho.apresentacaoLocal ? ` (${trabalho.apresentacaoLocal})` : ""} — Sem choque com cursos
+                            </p>
+                          )}
+                        </div>
+
+                        {trabalho.arquivoUrl && (
+                          <div className="pt-1">
+                            <div className="inline-flex items-center gap-3 p-2.5 px-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-xs">
+                              <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-[10px] uppercase shadow-xs shrink-0">
+                                PDF
+                              </div>
+                              <div className="min-w-0 pr-2">
+                                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px] sm:max-w-xs">
+                                  {trabalho.arquivoNome || "Artigo_Cientifico.pdf"}
+                                </p>
+                                {trabalho.arquivoTamanho && (
+                                  <p className="text-[11px] text-slate-400">{trabalho.arquivoTamanho}</p>
+                                )}
+                              </div>
+                              <a
+                                href={trabalho.arquivoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-colors cursor-pointer shrink-0"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Visualizar PDF</span>
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-blue-900/30">
+                        {trabalho.arquivoUrl && (
+                          <a
+                            href={trabalho.arquivoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={trabalho.arquivoNome || "Trabalho_Cientifico.pdf"}
+                            className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Baixar PDF</span>
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTrabalhoParecer(trabalho);
+                            setDecisaoModal(
+                              trabalho.status.toLowerCase().includes("ressalva")
+                                ? "Aceito com ressalvas"
+                                : trabalho.status.toLowerCase().includes("recusado")
+                                  ? "Recusado"
+                                  : "Aceito"
+                            );
+                            setNotaPreModal(
+                              trabalho.notaPreCongresso !== null && trabalho.notaPreCongresso !== undefined
+                                ? String(trabalho.notaPreCongresso)
+                                : "9.0"
+                            );
+                            setParecerModalTexto(trabalho.parecer || "");
+                          }}
+                          className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer text-center"
                         >
-                          <Download className="w-4 h-4" />
-                          <span>Baixar PDF</span>
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setTrabalhoParecer(trabalho)}
-                        className="flex-1 lg:flex-initial py-2.5 px-4 rounded-xl border border-slate-200 dark:border-blue-900/50 hover:bg-slate-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+                          Avaliar / Ver Parecer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* TABELA DE RANKING DE NOTAS POR ORDEM DECRESCENTE */}
+                  <div className="mt-6 rounded-3xl border border-slate-200 dark:border-blue-900/40 bg-white dark:bg-[#0c1e33] overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-[#1e3a8a] to-indigo-900 text-white px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <Trophy className="w-5 h-5 text-amber-300 shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-sm sm:text-base">
+                            Ranking de Notas por Ordem Decrescente
+                          </h4>
+                          <p className="text-[11px] text-blue-100/90">
+                            Maiores notas no topo, com opção de usar também a nota da avaliação pré-congresso.
+                          </p>
+                        </div>
+                      </div>
+                      <select
+                        value={modoRankingAnalytics}
+                        onChange={(e) => setModoRankingAnalytics(e.target.value as any)}
+                        className="px-3 py-1.5 rounded-xl bg-white/15 text-white border border-white/25 text-xs font-bold outline-none cursor-pointer"
                       >
-                        Ver Parecer
-                      </button>
+                        <option value="media_pre_e_apresentacao" className="text-slate-900">
+                          Média (Pré-Congresso + Apresentação)
+                        </option>
+                        <option value="soma_pre_e_apresentacao" className="text-slate-900">
+                          Soma (Pré-Congresso + Apresentação)
+                        </option>
+                        <option value="apenas_apresentacao" className="text-slate-900">
+                          Apenas Nota da Apresentação
+                        </option>
+                        <option value="apenas_pre_congresso" className="text-slate-900">
+                          Apenas Nota Pré-Congresso
+                        </option>
+                      </select>
+                    </div>
+                    <div className="p-5 overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                        <thead className="bg-slate-50 dark:bg-[#071321] text-[11px] font-bold text-slate-500 uppercase border-b border-slate-200 dark:border-blue-900/40">
+                          <tr>
+                            <th className="py-2.5 px-3">Posição</th>
+                            <th className="py-2.5 px-3">Trabalho</th>
+                            <th className="py-2.5 px-3">Autor</th>
+                            <th className="py-2.5 px-3">Área</th>
+                            <th className="py-2.5 px-3">Nota Pré</th>
+                            <th className="py-2.5 px-3">Nota Apresentação</th>
+                            <th className="py-2.5 px-3">Nota Ranking</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-blue-900/30">
+                          {[...analytics.trabalhos]
+                            .map((t) => ({
+                              ...t,
+                              notaCalc: calcularNotaRanking(t.raw || t, modoRankingAnalytics),
+                            }))
+                            .sort((a, b) => b.notaCalc - a.notaCalc)
+                            .map((t, idx) => (
+                              <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-[#071321]/60">
+                                <td className="py-2.5 px-3 font-extrabold text-slate-900 dark:text-white">
+                                  {idx + 1}º
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white max-w-xs truncate">
+                                  {t.titulo}
+                                </td>
+                                <td className="py-2.5 px-3">{t.autores}</td>
+                                <td className="py-2.5 px-3">{t.eixoTematico}</td>
+                                <td className="py-2.5 px-3">
+                                  {t.notaPreCongresso !== null && t.notaPreCongresso !== undefined
+                                    ? Number(t.notaPreCongresso).toFixed(2)
+                                    : "-"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  {t.notaDiaMedia !== null && t.notaDiaMedia !== undefined
+                                    ? Number(t.notaDiaMedia).toFixed(2)
+                                    : "-"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold text-xs">
+                                    {t.notaCalc.toFixed(2)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                ))
+                </div>
               ) : (
                 <div className="p-12 text-center bg-white dark:bg-[#0c1e33] rounded-3xl border border-dashed border-slate-200 dark:border-blue-900/40 space-y-4 max-w-lg mx-auto mt-8">
                   <div className="w-14 h-14 rounded-3xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto shadow-xs">
@@ -1041,10 +1371,10 @@ function AnalyticsContent() {
             </div>
           )}
 
-          {/* Modal de Parecer */}
+          {/* Modal de Avaliação e Parecer */}
           {trabalhoParecer && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-              <div className="w-full max-w-lg bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in">
+              <div className="w-full max-w-lg bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -1052,7 +1382,7 @@ function AnalyticsContent() {
                     </div>
                     <div>
                       <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
-                        Parecer do Trabalho
+                        Avaliação e Parecer do Resumo
                       </h3>
                       <p className="text-xs text-slate-500">ID: {trabalhoParecer.id}</p>
                     </div>
@@ -1066,7 +1396,7 @@ function AnalyticsContent() {
                   </button>
                 </div>
 
-                <div className="space-y-4 text-xs sm:text-sm">
+                <div className="space-y-3 text-xs sm:text-sm">
                   <div>
                     <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
                       Título do Trabalho
@@ -1076,32 +1406,71 @@ function AnalyticsContent() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40">
+                  {trabalhoParecer.resumo && (
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
-                        Status
+                      <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
+                        Texto do Resumo ({trabalhoParecer.tipoResumo === "expandido" ? "Expandido" : "Simples"})
                       </span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">
-                        {trabalhoParecer.status}
-                      </span>
+                      <div className="mt-1 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-slate-700 dark:text-slate-300 leading-relaxed text-xs max-h-40 overflow-y-auto whitespace-pre-wrap">
+                        {trabalhoParecer.resumo}
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
-                        Nota Final
-                      </span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">
-                        {trabalhoParecer.nota || "Pendente"}
-                      </span>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
+                      Resultado da Avaliação (3 opções)
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["Aceito", "Aceito com ressalvas", "Recusado"] as const).map((op) => (
+                        <button
+                          key={op}
+                          type="button"
+                          onClick={() => setDecisaoModal(op)}
+                          className={`py-2 px-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                            decisaoModal === op
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-slate-50 dark:bg-[#071321] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-blue-900/40"
+                          }`}
+                        >
+                          {op}
+                        </button>
+                      ))}
                     </div>
+                    {decisaoModal === "Aceito com ressalvas" && (
+                      <p className="text-[11px] text-indigo-600 dark:text-indigo-400">
+                        O resumo voltará para o autor corrigir e será reenviado automaticamente para o mesmo avaliador.
+                      </p>
+                    )}
                   </div>
 
+                  {decisaoModal === "Aceito" && (
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold mb-1">
+                        Nota da Avaliação Pré-Congresso (0 a 10)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="10"
+                        value={notaPreModal}
+                        onChange={(e) => setNotaPreModal(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50 dark:bg-[#071321] text-slate-900 dark:text-white text-xs font-bold outline-none"
+                      />
+                    </div>
+                  )}
+
                   <div>
-                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
-                      Avaliação & Considerações da Comissão
+                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold mb-1">
+                      Parecer & Considerações para o Autor
                     </span>
-                    <p className="mt-1 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-slate-700 dark:text-slate-300 leading-relaxed text-xs">
-                      {trabalhoParecer.parecer || "Nenhum parecer emitido até o momento. A comissão científica está em processo de avaliação."}
-                    </p>
+                    <textarea
+                      rows={3}
+                      value={parecerModalTexto}
+                      onChange={(e) => setParecerModalTexto(e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 text-slate-700 dark:text-slate-300 text-xs outline-none"
+                    />
                   </div>
 
                   {trabalhoParecer.arquivoUrl && (
@@ -1122,13 +1491,21 @@ function AnalyticsContent() {
                   )}
                 </div>
 
-                <div className="pt-2 flex justify-end">
+                <div className="pt-2 flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setTrabalhoParecer(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSalvarParecerNoAnalytics}
+                    disabled={salvandoParecerModal}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
                   >
-                    Fechar
+                    {salvandoParecerModal ? "Salvando..." : "Salvar Avaliação"}
                   </button>
                 </div>
               </div>

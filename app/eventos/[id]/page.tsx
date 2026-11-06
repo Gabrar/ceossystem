@@ -48,7 +48,9 @@ import {
   X,
   ArrowRight,
   CreditCard,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Plus
 } from "lucide-react";
 
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -169,6 +171,30 @@ interface EventoDetalhes {
   mensagens: string[];
   userId?: string | null;
   promotorEmail?: string | null;
+  submissaoTrabalhos?: {
+    naoSeAplica?: boolean;
+    dataInicio?: string;
+    horaInicio?: string;
+    dataFim?: string;
+    horaFim?: string;
+    dataResultado?: string;
+    areasAvaliacao?: string[];
+    eixosTematicos?: Array<{ nome: string; descricao?: string }>;
+    modalidades?: string[];
+    limiteAutores?: number;
+    limiteTrabalhos?: number;
+    exigirInscricaoPaga?: boolean;
+    tipoAvaliacao?: string;
+    normas?: string;
+    instrucoes?: string;
+    editalUrl?: string;
+    editalNome?: string;
+    qtdAvaliadoresPorResumo?: number;
+    limiteCaracteresSimples?: number;
+    limiteCaracteresExpandido?: number;
+    regraPublicacaoAnais?: "todos_aprovados" | "apresentados";
+    avaliadoresComissao?: any[];
+  } | null;
 }
 
 export default function EventoDetailsPage({
@@ -202,6 +228,8 @@ export default function EventoDetailsPage({
   const [modalCredenciamento, setModalCredenciamento] = useState(false);
   const [modalCertificado, setModalCertificado] = useState(false);
   const [modalAnais, setModalAnais] = useState(false);
+  const [trabalhosEventoAnais, setTrabalhosEventoAnais] = useState<any[]>([]);
+  const [filtroAnaisVisualizacao, setFiltroAnaisVisualizacao] = useState<"todos_aprovados" | "apresentados">("todos_aprovados");
 
 
   useEffect(() => {
@@ -312,7 +340,28 @@ export default function EventoDetailsPage({
           mensagens: data.mensagens || [],
           userId: data.userId || null,
           promotorEmail: data.promotorEmail || null,
+          submissaoTrabalhos: data.submissaoTrabalhos || null,
         });
+
+        if (data.submissaoTrabalhos?.regraPublicacaoAnais === "apresentados") {
+          setFiltroAnaisVisualizacao("apresentados");
+        } else {
+          setFiltroAnaisVisualizacao("todos_aprovados");
+        }
+
+        try {
+          const qTrab = query(collection(db, "trabalhos"), where("eventoId", "==", docSnap.id));
+          const snapTrab = await getDocs(qTrab);
+          const aprovados = snapTrab.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter((t: any) => {
+              const s = (t.status || "").toLowerCase();
+              return (s.includes("aceito") || s.includes("aprovado")) && !s.includes("ressalva");
+            });
+          setTrabalhosEventoAnais(aprovados);
+        } catch (errTrab) {
+          console.warn("Aviso ao carregar trabalhos para anais:", errTrab);
+        }
       } catch (err: any) {
         console.error("Erro ao carregar detalhes do evento:", err);
         setError("Não foi possível carregar as informações deste evento no momento.");
@@ -400,6 +449,10 @@ export default function EventoDetailsPage({
         scrollToSection("programacao");
         break;
       case "trabalhos":
+        if (evento?.submissaoTrabalhos?.naoSeAplica) {
+          alert("Este evento não aceita submissão de trabalhos científicos.");
+          break;
+        }
         if (!temAcesso) {
           setModalAcessoRestrito(true);
         } else {
@@ -1061,7 +1114,8 @@ export default function EventoDetailsPage({
             {/* 4.5 Programação */}
             {evento.programacao && evento.programacao.length > 0 && (
               <section id="programacao-print-section" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
-                <style dangerouslySetInnerHTML={{__html: `
+                <style dangerouslySetInnerHTML={{
+                  __html: `
                   @media print {
                     body * {
                       visibility: hidden;
@@ -1089,7 +1143,7 @@ export default function EventoDetailsPage({
                     <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     Programação do Evento
                   </h2>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => window.print()}
                     className="print-hide inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-colors cursor-pointer"
@@ -1106,7 +1160,7 @@ export default function EventoDetailsPage({
                         <Calendar className="w-4 h-4 text-blue-500" />
                         {dia.data.split('-').reverse().join('/')}
                       </h3>
-                      
+
                       <div className="space-y-3">
                         {dia.atividades.map((ativ, aIdx) => (
                           <div key={aIdx} className="p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-blue-900/40 bg-slate-50 dark:bg-[#071321] flex flex-col sm:flex-row gap-3 sm:items-center break-inside-avoid">
@@ -1116,7 +1170,7 @@ export default function EventoDetailsPage({
                               <span className="text-[10px] text-blue-500/70 sm:hidden">-</span>
                               <span>{ativ.horaFim}</span>
                             </div>
-                            
+
                             <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div className="space-y-0.5">
                                 <h4 className="font-bold text-slate-900 dark:text-white text-sm">{ativ.titulo}</h4>
@@ -1126,7 +1180,7 @@ export default function EventoDetailsPage({
                                   </p>
                                 )}
                               </div>
-                              
+
                               {ativ.local && (
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 bg-white dark:bg-[#0c1e33] px-2.5 py-1 rounded-md border border-slate-100 dark:border-blue-900/50">
                                   <MapPin className="w-3.5 h-3.5 text-rose-400" />
@@ -1189,6 +1243,130 @@ export default function EventoDetailsPage({
                   )}
                 </section>
               )}
+
+            {/* Seção Trabalhos Científicos & Submissão */}
+            {evento.submissaoTrabalhos && !evento.submissaoTrabalhos.naoSeAplica && (
+              <section id="trabalhos" className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/80 dark:border-blue-900/40 shadow-xs space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-blue-900/40">
+                  <div className="space-y-1">
+                    <span className="text-xs uppercase tracking-wider font-bold text-blue-600 dark:text-blue-400">
+                      Produção Científica & Acadêmica
+                    </span>
+                    <h2 className="font-montserrat text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      Trabalhos & Submissão
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {evento.submissaoTrabalhos.editalUrl && (
+                      <a
+                        href={evento.submissaoTrabalhos.editalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold text-xs transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Baixar Edital / Modelo</span>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleBarAction("trabalhos")}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Submeter Trabalho</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid de Prazos e Metadados */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {evento.submissaoTrabalhos.dataFim && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold uppercase">Prazo Limite de Envio</span>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        {evento.submissaoTrabalhos.dataFim.split("-").reverse().join("/")}
+                        {evento.submissaoTrabalhos.horaFim && ` até às ${evento.submissaoTrabalhos.horaFim}`}
+                      </p>
+                    </div>
+                  )}
+                  {evento.submissaoTrabalhos.dataResultado && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold uppercase">Resultado dos Pareceres</span>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        {evento.submissaoTrabalhos.dataResultado.split("-").reverse().join("/")}
+                      </p>
+                    </div>
+                  )}
+                  {evento.submissaoTrabalhos.tipoAvaliacao && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold uppercase">Modelo de Avaliação</span>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {evento.submissaoTrabalhos.tipoAvaliacao}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Eixos Temáticos */}
+                {evento.submissaoTrabalhos.eixosTematicos && evento.submissaoTrabalhos.eixosTematicos.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Eixos Temáticos & Áreas de Concentração
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {evento.submissaoTrabalhos.eixosTematicos.map((eixo: any, idx: number) => {
+                        const nome = typeof eixo === "string" ? eixo : eixo.nome;
+                        const desc = typeof eixo === "object" ? eixo.descricao : "";
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3.5 rounded-2xl bg-slate-50/60 dark:bg-[#071321]/60 border border-slate-200/80 dark:border-blue-900/40 space-y-1"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center shrink-0">
+                                {idx + 1}
+                              </div>
+                              <span className="font-bold text-xs text-slate-900 dark:text-white">{nome}</span>
+                            </div>
+                            {desc && <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-8">{desc}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Modalidades aceitas */}
+                {evento.submissaoTrabalhos.modalidades && evento.submissaoTrabalhos.modalidades.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-blue-900/30">
+                    <span className="text-[11px] font-semibold uppercase text-slate-400">Modalidades Aceitas:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {evento.submissaoTrabalhos.modalidades.map((mod: string, mIdx: number) => (
+                        <span
+                          key={mIdx}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-blue-950/40 border border-slate-200 dark:border-blue-900/40 text-slate-700 dark:text-slate-300 text-xs font-medium"
+                        >
+                          {mod}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Normas */}
+                {evento.submissaoTrabalhos.normas && (
+                  <div className="p-4 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 space-y-1.5 text-xs">
+                    <span className="font-bold text-slate-900 dark:text-white">Diretrizes e Normas aos Autores</span>
+                    <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed text-[11px]">
+                      {evento.submissaoTrabalhos.normas}
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
 
           </div>
 
@@ -1631,6 +1809,7 @@ export default function EventoDetailsPage({
         eventoTitulo={evento.titulo}
         user={user}
         userData={userData}
+        submissaoConfig={evento.submissaoTrabalhos}
       />
 
       {/* Modal de Acesso Restrito a Não-Inscritos */}
@@ -1810,33 +1989,146 @@ export default function EventoDetailsPage({
         </div>
       )}
 
-      {/* Modal de Anais */}
+      {/* Modal de Anais Científicos (Todos os Aprovados vs. Apenas os Apresentados) */}
       {modalAnais && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
-            <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
-                <BookOpen className="w-5 h-5" />
+          <div className="w-full max-w-2xl bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in max-h-[88vh] flex flex-col">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-montserrat font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                    Anais Científicos do Evento
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Regra oficial do evento:{" "}
+                    <strong>
+                      {evento.submissaoTrabalhos?.regraPublicacaoAnais === "apresentados"
+                        ? "Apenas os trabalhos apresentados"
+                        : "Todos os trabalhos aprovados"}
+                    </strong>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-montserrat font-bold text-base text-slate-900 dark:text-white">
-                  Anais Científicos
-                </h3>
-                <p className="text-xs text-slate-500">Publicação com ISBN oficial</p>
-              </div>
-            </div>
-
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Todos os trabalhos aprovados pela comissão examinadora deste evento serão publicados no livro oficial de Anais com indexação científica e registro DOI/ISBN após o evento.
-            </p>
-
-            <div className="pt-2 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setModalAnais(false)}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
               >
-                Entendi
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Opção para alternar entre Todos os Trabalhos Aprovados ou Só os Apresentados */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1.5 rounded-2xl bg-slate-100 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40">
+              <button
+                type="button"
+                onClick={() => setFiltroAnaisVisualizacao("todos_aprovados")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filtroAnaisVisualizacao === "todos_aprovados"
+                    ? "bg-[#1e3a8a] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Todos os Trabalhos Aprovados ({trabalhosEventoAnais.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroAnaisVisualizacao("apresentados")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filtroAnaisVisualizacao === "apresentados"
+                    ? "bg-[#1e3a8a] text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Apenas os Trabalhos Apresentados (
+                {trabalhosEventoAnais.filter((t) => Boolean(t.apresentadoNoEvento)).length})
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {(() => {
+                const listaFiltradaAnais =
+                  filtroAnaisVisualizacao === "apresentados"
+                    ? trabalhosEventoAnais.filter((t) => Boolean(t.apresentadoNoEvento))
+                    : trabalhosEventoAnais;
+
+                if (listaFiltradaAnais.length === 0) {
+                  return (
+                    <div className="p-6 rounded-2xl bg-slate-50 dark:bg-[#071321]/60 border border-dashed border-slate-200 dark:border-blue-900/40 text-center space-y-1.5">
+                      <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {filtroAnaisVisualizacao === "apresentados"
+                          ? "Nenhum trabalho com apresentação confirmada nos Anais até o momento."
+                          : "Nenhum trabalho aprovado publicado nos Anais até o momento."}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Os trabalhos aprovados pela comissão científica aparecerão automaticamente nesta listagem oficial.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return listaFiltradaAnais.map((trab, idx) => (
+                  <div
+                    key={trab.id || idx}
+                    className="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40 space-y-1.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-bold">
+                        {trab.areaAvaliacao || trab.eixoTematico || "Área Geral"}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold">
+                          {trab.tipoResumo === "expandido" ? "Resumo Expandido" : "Resumo Simples"}
+                        </span>
+                        {trab.apresentadoNoEvento && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                            ✓ Apresentado ({trab.modalidadeApresentacao || trab.modalidade || "Banner"})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      {trab.titulo}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <strong>Autor(es):</strong> {trab.autorPrincipal || trab.autores || trab.userEmail}
+                      {Array.isArray(trab.coautores) && trab.coautores.length > 0
+                        ? `, ${trab.coautores.join(", ")}`
+                        : ""}
+                    </p>
+                    {trab.resumo && (
+                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 pt-1">
+                        {trab.resumo}
+                      </p>
+                    )}
+                    {trab.arquivoUrl && (
+                      <div className="pt-1">
+                        <a
+                          href={trab.arquivoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Abrir PDF do Trabalho</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100 dark:border-blue-900/30">
+              <button
+                type="button"
+                onClick={() => setModalAnais(false)}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+              >
+                Fechar Anais
               </button>
             </div>
           </div>

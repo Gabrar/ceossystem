@@ -60,6 +60,17 @@ export interface TrabalhoSubmetido {
   arquivoTamanho?: string;
   userId?: string;
   userEmail?: string;
+  tipoResumo?: "simples" | "expandido";
+  notaPreCongresso?: number | null;
+  notaDiaMedia?: number | null;
+  modalidadeApresentacao?: "Oral" | "Banner";
+  apresentacaoDiaLabel?: string;
+  apresentacaoHoraInicio?: string;
+  apresentacaoHoraFim?: string;
+  apresentacaoLocal?: string;
+  apresentadoNoEvento?: boolean;
+  avaliadoresDesignadosNomes?: string[];
+  raw?: any;
 }
 
 export interface EventoAnalyticsData {
@@ -83,6 +94,8 @@ export interface EventoAnalyticsData {
   distribuicaoStatus: StatusDistribuicao[];
   participantes: ParticipanteInscrito[];
   trabalhos: TrabalhoSubmetido[];
+  submissaoTrabalhos?: any;
+  minicursos?: any[];
 }
 
 export interface EventoPromotorItem {
@@ -428,18 +441,34 @@ export async function buscarAnalyticsDoEvento(
   const trabalhos: TrabalhoSubmetido[] = Array.from(trabalhosMap.entries()).map(([id, data]) => ({
     id,
     titulo: data.titulo || data.title || "Sem título informado",
-    eixoTematico: data.eixoTematico || data.area || "Geral",
-    autores: data.autores || data.authors || data.userName || "Autor Principal",
+    eixoTematico: data.areaAvaliacao || data.eixoTematico || data.area || "Geral",
+    autores: data.autorPrincipal || data.autores || data.authors || data.userName || "Autor Principal",
     status: data.status || "Em Avaliação",
     dataSubmissao: data.createdAt ? (typeof data.createdAt === "string" ? new Date(data.createdAt).toLocaleDateString("pt-BR") : (data.createdAt.toDate ? data.createdAt.toDate().toLocaleDateString("pt-BR") : "Data não informada")) : "Data não informada",
-    nota: data.nota || "-",
+    nota:
+      data.notaDiaMedia !== undefined && data.notaDiaMedia !== null
+        ? String(data.notaDiaMedia)
+        : data.notaPreCongresso !== undefined && data.notaPreCongresso !== null
+          ? String(data.notaPreCongresso)
+          : data.nota || "-",
     resumo: data.resumo || "",
-    parecer: data.parecer || "Trabalho submetido com sucesso. Aguardando parecer da comissão científica examinadora.",
+    parecer: data.parecerAvaliador || data.parecer || "Trabalho submetido com sucesso. Aguardando parecer da comissão científica examinadora.",
     arquivoUrl: data.arquivoUrl || data.pdfUrl || data.fileUrl || "",
     arquivoNome: data.arquivoNome || data.pdfNome || data.fileName || "",
     arquivoTamanho: data.arquivoTamanho || data.fileSize || "",
     userId: data.userId || "",
     userEmail: data.userEmail || "",
+    tipoResumo: data.tipoResumo === "expandido" ? "expandido" : "simples",
+    notaPreCongresso: data.notaPreCongresso ?? null,
+    notaDiaMedia: data.notaDiaMedia ?? null,
+    modalidadeApresentacao: data.modalidadeApresentacao || data.modalidade || "Banner",
+    apresentacaoDiaLabel: data.apresentacaoDiaLabel || "",
+    apresentacaoHoraInicio: data.apresentacaoHoraInicio || "",
+    apresentacaoHoraFim: data.apresentacaoHoraFim || "",
+    apresentacaoLocal: data.apresentacaoLocal || "",
+    apresentadoNoEvento: Boolean(data.apresentadoNoEvento),
+    avaliadoresDesignadosNomes: Array.isArray(data.avaliadoresDesignadosNomes) ? data.avaliadoresDesignadosNomes : [],
+    raw: { id, ...data },
   }));
 
   return {
@@ -463,6 +492,8 @@ export async function buscarAnalyticsDoEvento(
     distribuicaoStatus,
     participantes,
     trabalhos,
+    submissaoTrabalhos: evData.submissaoTrabalhos || null,
+    minicursos: evData.minicursos || [],
   };
 }
 

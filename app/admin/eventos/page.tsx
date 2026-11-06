@@ -766,6 +766,18 @@ export default function AdminEventosPage() {
               </div>
             </div>
 
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-950/40 border border-blue-900/40 text-xs">
+              <span className="text-slate-300">Deseja editar etapas completas (Minicursos, Trabalhos & Submissão, Programação)?</span>
+              <Link
+                href={`/eventos/createEvent?id=${modalEditarEvento.id}`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors shrink-0"
+              >
+                <span>Editor Completo</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
             <form onSubmit={handleSalvarEdicao} className="space-y-4 text-xs">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-300">Título do Evento</label>
