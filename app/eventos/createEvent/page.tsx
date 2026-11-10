@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     Info, MapPin, AlignLeft, Users, Save, Loader2, Calendar, Ticket,
     ShieldAlert, ImagePlus, Trash2, Plus, MessageSquare, BookOpen,
-    Landmark, Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle,
+    Upload, X, ChevronLeft, ChevronRight, UserPlus, PlusCircle,
     ArrowLeft, ArrowRight, Check, Sparkles, Building2, CreditCard, Clock, Map,
     CalendarCheck, AlertCircle, GripVertical, Wallet, FileText, Layers, FileCheck,
     Paperclip, Download, Settings, SlidersHorizontal, User, GraduationCap,
@@ -189,12 +189,6 @@ function CreateEventContent() {
         }));
     };
 
-    // 12. Financeiro
-    const [bancarioNaoSeAplica, setBancarioNaoSeAplica] = useState(false);
-    const [dadosBancarios, setDadosBancarios] = useState({
-        banco: "", agencia: "", nomeBanco: "", conta: "", titular: "", documentoTitular: "", chavePix: ""
-    });
-
     // 13. Trabalhos & Submissão
     const [trabalhosNaoSeAplica, setTrabalhosNaoSeAplica] = useState(false);
     const [subTabTrabalhos, setSubTabTrabalhos] = useState<"configurar" | "areas" | "avaliacao_dia">("configurar");
@@ -362,6 +356,18 @@ function CreateEventContent() {
     const [adminParecerPre, setAdminParecerPre] = useState("");
     const [salvandoPreAdmin, setSalvandoPreAdmin] = useState(false);
 
+    // Modal de Pendência / Ação Obrigatória (Preencher ou Marcar "Não se aplica")
+    interface PendenciaSecao {
+        tabId: string;
+        secaoKey: "nome" | "descricao" | "datas_evento" | "datas_inscricao" | "local" | "ingressos" | "mensagens" | "palestrantes" | "minicursos" | "programacao" | "trabalhos" | "equipe" | "patrocinios";
+        titulo: string;
+        subtitulo: string;
+        descricao: string;
+        subTabTrabalhos?: "configurar" | "areas" | "avaliacao_dia";
+        temNaoSeAplica: boolean;
+    }
+    const [modalPendencia, setModalPendencia] = useState<PendenciaSecao | null>(null);
+
     useEffect(() => {
         async function carregarEventoParaEdicao() {
             if (!editId || !user) return;
@@ -423,6 +429,8 @@ function CreateEventContent() {
                 if (data.description) {
                     setDescricaoNaoSeAplica(false);
                     setDescricao(data.description);
+                } else {
+                    setDescricaoNaoSeAplica(true);
                 }
                 if (data.redesSociais) {
                     setInstagram(data.redesSociais.instagram || "");
@@ -479,14 +487,17 @@ function CreateEventContent() {
                     setAdminsNaoSeAplica(true);
                 }
 
-                if (data.patrocinadores && data.patrocinadores.length > 0) {
+                const temPatro = (data.patrocinadores && data.patrocinadores.length > 0) || (data.apoiadores && data.apoiadores.length > 0);
+                if (temPatro) {
                     setPatrociniosNaoSeAplica(false);
-                    setPatrocinadores(data.patrocinadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
-                }
-
-                if (data.apoiadores && data.apoiadores.length > 0) {
-                    setPatrociniosNaoSeAplica(false);
-                    setApoiadores(data.apoiadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
+                    if (data.patrocinadores && data.patrocinadores.length > 0) {
+                        setPatrocinadores(data.patrocinadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
+                    }
+                    if (data.apoiadores && data.apoiadores.length > 0) {
+                        setApoiadores(data.apoiadores.map((url: string, i: number) => ({ id: Date.now() + i, file: null, fileName: url })));
+                    }
+                } else {
+                    setPatrociniosNaoSeAplica(true);
                 }
 
                 if (data.programacao && Array.isArray(data.programacao) && data.programacao.length > 0) {
@@ -505,13 +516,6 @@ function CreateEventContent() {
                     })));
                 } else {
                     setProgramacaoNaoSeAplica(true);
-                }
-
-                if (data.dadosBancarios) {
-                    setBancarioNaoSeAplica(false);
-                    setDadosBancarios(data.dadosBancarios);
-                } else {
-                    setBancarioNaoSeAplica(true);
                 }
 
                 if (data.submissaoTrabalhos) {
@@ -664,7 +668,7 @@ function CreateEventContent() {
                         setDiasAvaliacao(gerarDiasDoIntervaloEvento(data.dateInicio || "", data.dateFim || ""));
                     }
                 } else {
-                    setTrabalhosNaoSeAplica(false);
+                    setTrabalhosNaoSeAplica(true);
                     setAreasAvaliacao([]);
                     setDiasAvaliacao(gerarDiasDoIntervaloEvento(data.dateInicio || "", data.dateFim || ""));
                 }
@@ -727,7 +731,6 @@ function CreateEventContent() {
         { id: "trabalhos", label: "Trabalhos & Submissão", icon: FileText, desc: "Prazos, eixos temáticos e regras" },
         { id: "equipe", label: "Equipe", icon: ShieldAlert, desc: "Administradores e permissões" },
         { id: "patrocinios", label: "Patrocínios", icon: ImagePlus, desc: "Marcas parceiras e apoiadores" },
-        { id: "financeiro", label: "Financeiro", icon: Landmark, desc: "Conta e chave PIX para repasses" },
     ];
 
     // --- Controle de rolagem das abas ---
@@ -774,6 +777,219 @@ function CreateEventContent() {
                 el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
             }
         }
+    };
+
+    // --- Validação Obrigatória de Seções e "Não se aplica" ---
+    const obterPendenciasEvento = (): PendenciaSecao[] => {
+        const pendencias: PendenciaSecao[] = [];
+
+        // 1. Básicas - Nome do Evento
+        if (!nomeEvento.trim()) {
+            pendencias.push({
+                tabId: "basicas",
+                secaoKey: "nome",
+                titulo: "Nome do Evento Obrigatório",
+                subtitulo: "Aba Básicas",
+                descricao: "Por favor, informe o nome do seu evento antes de prosseguir.",
+                temNaoSeAplica: false,
+            });
+        }
+
+        // 1.1 Básicas - Descrição do Evento
+        if (!descricaoNaoSeAplica && !descricao.trim()) {
+            pendencias.push({
+                tabId: "basicas",
+                secaoKey: "descricao",
+                titulo: "Descrição do Evento",
+                subtitulo: "Aba Básicas • Descrição e Redes Sociais",
+                descricao: "A descrição do evento não foi preenchida. Caso seu evento não necessite de uma descrição detalhada, você deve voltar a este campo e habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 2. Datas - Realização do Evento
+        if (!dataInicio || !dataFim) {
+            pendencias.push({
+                tabId: "datas",
+                secaoKey: "datas_evento",
+                titulo: "Datas de Realização do Evento",
+                subtitulo: "Aba Datas • Período do Evento",
+                descricao: "As datas de início e término do evento são obrigatórias para que a programação e o calendário funcionem corretamente.",
+                temNaoSeAplica: false,
+            });
+        }
+
+        // 2.1 Datas - Inscrições
+        if (!dataInscricaoInicio || !dataInscricaoFim) {
+            pendencias.push({
+                tabId: "datas",
+                secaoKey: "datas_inscricao",
+                titulo: "Período das Inscrições",
+                subtitulo: "Aba Datas • Período das Inscrições",
+                descricao: "Informe as datas de início e término das inscrições para permitir que o público possa se inscrever.",
+                temNaoSeAplica: false,
+            });
+        }
+
+        // 3. Local
+        const temLocalPreenchido = Boolean(nomeLocal.trim() || endereco.trim() || cidade.trim() || cep.trim());
+        if (!localNaoSeAplica && !temLocalPreenchido) {
+            pendencias.push({
+                tabId: "local",
+                secaoKey: "local",
+                titulo: "Localização e Espaço Físico",
+                subtitulo: "Aba Local",
+                descricao: "Os dados de localização não foram informados. Preencha o local do evento ou, caso seja um evento 100% online ou sem local fixo, você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 4. Ingressos
+        const temLoteValido = lotes.length > 0 && lotes.some(l => Boolean(l.perfil?.trim() && l.preco !== "" && l.preco !== undefined));
+        if (!ingressosNaoSeAplica && !temLoteValido) {
+            pendencias.push({
+                tabId: "ingressos",
+                secaoKey: "ingressos",
+                titulo: "Ingressos por Lotes",
+                subtitulo: "Aba Ingressos",
+                descricao: "Nenhum lote de ingresso foi configurado. Configure ao menos um perfil de ingresso com seu valor ou, caso as inscrições sejam externas ou gratuitas sem controle de lotes, você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 5. Mensagens
+        const temMensagemValida = mensagens.length > 0 && mensagens.some(m => m.texto.trim().length > 0);
+        if (!mensagensNaoSeAplica && !temMensagemValida) {
+            pendencias.push({
+                tabId: "mensagens",
+                secaoKey: "mensagens",
+                titulo: "Mensagens e Avisos Rápidos",
+                subtitulo: "Aba Mensagens",
+                descricao: "O carrossel de avisos não possui nenhuma mensagem cadastrada. Adicione ao menos um aviso rápido ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 6. Palestrantes
+        const temPalestranteValido = palestrantes.length > 0 && palestrantes.some(p => p.nome.trim().length > 0);
+        if (!palestrantesNaoSeAplica && !temPalestranteValido) {
+            pendencias.push({
+                tabId: "palestrantes",
+                secaoKey: "palestrantes",
+                titulo: "Palestrantes e Convidados",
+                subtitulo: "Aba Palestrantes",
+                descricao: "Nenhum palestrante foi cadastrado. Adicione os palestrantes do evento ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 7. Minicursos
+        const temMinicursoValido = minicursos.length > 0 && minicursos.some(m => m.nome.trim().length > 0);
+        if (!minicursosNaoSeAplica && !temMinicursoValido) {
+            pendencias.push({
+                tabId: "minicursos",
+                secaoKey: "minicursos",
+                titulo: "Minicursos e Workshops",
+                subtitulo: "Aba Minicursos",
+                descricao: "Nenhum minicurso foi cadastrado. Adicione os minicursos/oficinas ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 8. Programação
+        const temProgramacaoValida = programacao.length > 0 && programacao.some(d => Boolean(d.data?.trim() || (d.atividades && d.atividades.some(a => a.titulo?.trim().length > 0))));
+        if (!programacaoNaoSeAplica && !temProgramacaoValida) {
+            pendencias.push({
+                tabId: "programacao",
+                secaoKey: "programacao",
+                titulo: "Grade de Programação",
+                subtitulo: "Aba Programação",
+                descricao: "A grade de programação do evento está em branco. Monte as atividades da programação ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 9. Trabalhos & Submissão
+        if (!trabalhosNaoSeAplica) {
+            if (!inicioSubmissaoDateTime || !fimSubmissaoDateTime) {
+                pendencias.push({
+                    tabId: "trabalhos",
+                    subTabTrabalhos: "configurar",
+                    secaoKey: "trabalhos",
+                    titulo: "Prazos de Submissão de Trabalhos",
+                    subtitulo: "Aba Trabalhos & Submissão • Configurar Submissão",
+                    descricao: "A submissão de trabalhos científicos está ativa, mas os prazos de início e término não foram preenchidos. Preencha as datas ou você deve habilitar a opção 'Não se aplica'.",
+                    temNaoSeAplica: true,
+                });
+            } else if (areasAvaliacao.length === 0) {
+                pendencias.push({
+                    tabId: "trabalhos",
+                    subTabTrabalhos: "areas",
+                    secaoKey: "trabalhos",
+                    titulo: "Áreas Temáticas de Avaliação",
+                    subtitulo: "Aba Trabalhos & Submissão • Áreas de Avaliação",
+                    descricao: "A submissão de trabalhos científicos está ativa, mas nenhuma Área de Avaliação foi cadastrada. Cadastre as áreas temáticas ou você deve habilitar a opção 'Não se aplica'.",
+                    temNaoSeAplica: true,
+                });
+            }
+        }
+
+        // 10. Equipe e Administradores
+        const temAdminValido = administradores.length > 0 && administradores.some(a => a.nome.trim().length > 0 || a.email.trim().length > 0);
+        if (!adminsNaoSeAplica && !temAdminValido) {
+            pendencias.push({
+                tabId: "equipe",
+                secaoKey: "equipe",
+                titulo: "Equipe e Administradores",
+                subtitulo: "Aba Equipe",
+                descricao: "Nenhum administrador adicional foi incluído. Adicione membros à comissão organizadora ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        // 11. Patrocínios e Apoiadores
+        const temPatrocinioValido = patrocinadores.some(p => p.file || (p.fileName && p.fileName.trim().length > 0)) ||
+            apoiadores.some(a => a.file || (a.fileName && a.fileName.trim().length > 0));
+        if (!patrociniosNaoSeAplica && !temPatrocinioValido) {
+            pendencias.push({
+                tabId: "patrocinios",
+                secaoKey: "patrocinios",
+                titulo: "Patrocinadores e Apoiadores",
+                subtitulo: "Aba Patrocínios",
+                descricao: "Nenhuma logomarca de patrocinador ou apoiador foi adicionada. Faça o upload das imagens ou você deve habilitar a opção 'Não se aplica'.",
+                temNaoSeAplica: true,
+            });
+        }
+
+        return pendencias;
+    };
+
+    const handleHabilitarNaoSeAplica = (secaoKey: string, autoAvancar: boolean = false) => {
+        switch (secaoKey) {
+            case "descricao": setDescricaoNaoSeAplica(true); break;
+            case "local": setLocalNaoSeAplica(true); break;
+            case "ingressos": setIngressosNaoSeAplica(true); break;
+            case "mensagens": setMensagensNaoSeAplica(true); break;
+            case "palestrantes": setPalestrantesNaoSeAplica(true); break;
+            case "minicursos": setMinicursosNaoSeAplica(true); break;
+            case "programacao": setProgramacaoNaoSeAplica(true); break;
+            case "trabalhos": setTrabalhosNaoSeAplica(true); break;
+            case "equipe": setAdminsNaoSeAplica(true); break;
+            case "patrocinios": setPatrociniosNaoSeAplica(true); break;
+        }
+        setModalPendencia(null);
+        if (autoAvancar && currentTabIndex < tabs.length - 1) {
+            goToTab(currentTabIndex + 1);
+        }
+    };
+
+    const handleAvancarEtapa = () => {
+        const pendenciasAbaAtual = obterPendenciasEvento().filter(p => p.tabId === activeTab);
+        if (pendenciasAbaAtual.length > 0) {
+            setModalPendencia(pendenciasAbaAtual[0]);
+            return;
+        }
+        goToTab(currentTabIndex + 1);
     };
 
     // --- Helpers Genéricos ---
@@ -1287,9 +1503,20 @@ function CreateEventContent() {
             return;
         }
 
-        if (!nomeEvento.trim()) {
-            setActiveTab("basicas");
-            return alert("Por favor, preencha ao menos o Nome do Evento na aba Básicas.");
+        // Validação obrigatória de todas as etapas e seções ("Não se aplica" explícito ou preenchimento)
+        const pendencias = obterPendenciasEvento();
+        if (pendencias.length > 0) {
+            const primeira = pendencias[0];
+            setActiveTab(primeira.tabId);
+            if (primeira.subTabTrabalhos) {
+                setSubTabTrabalhos(primeira.subTabTrabalhos);
+            }
+            const tabIdx = tabs.findIndex(t => t.id === primeira.tabId);
+            if (tabIdx !== -1 && tabsNavRef.current?.children[tabIdx]) {
+                (tabsNavRef.current.children[tabIdx] as HTMLElement).scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+            }
+            setModalPendencia(primeira);
+            return;
         }
 
         setIsLoading(true);
@@ -1459,7 +1686,7 @@ function CreateEventContent() {
                 administradores: adminsNaoSeAplica ? [] : administradores.map(({ id, ...rest }) => rest),
                 patrocinadores: patroUrls.filter(u => u !== ""),
                 apoiadores: apoiUrls.filter(u => u !== ""),
-                dadosBancarios: bancarioNaoSeAplica ? null : dadosBancarios,
+                dadosBancarios: null,
                 submissaoTrabalhos: submissaoTrabalhosObj,
                 emphasis: false,
                 userId: user?.uid || null,
@@ -1747,11 +1974,11 @@ function CreateEventContent() {
         }
     };
 
-    // Componente refinado do toggle "Não se aplica"
+    // Componente minimalista do toggle "Não se aplica" harmonizado com o tema
     const NaoSeAplicaToggle = ({ label = "Não se aplica", state, setState }: any) => (
-        <label className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all border select-none ${state
-            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 shadow-sm"
-            : "bg-slate-100 dark:bg-blue-950/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-blue-900/40 hover:border-slate-300 dark:hover:border-blue-700"
+        <label className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border select-none ${state
+            ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/25"
+            : "bg-slate-100/80 dark:bg-[#071321]/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-blue-900/40 hover:border-blue-400 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-300"
             }`}>
             <input
                 type="checkbox"
@@ -1760,8 +1987,8 @@ function CreateEventContent() {
                 className="sr-only"
             />
             <span className={`w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all ${state
-                ? "bg-amber-500 border-amber-500 text-white"
-                : "border-slate-400 dark:border-slate-600 bg-white dark:bg-[#071321]"
+                ? "bg-white text-blue-600 border-white"
+                : "border-slate-400 dark:border-slate-600 bg-white dark:bg-[#0c1e33]"
                 }`}>
                 {state && <Check className="w-2.5 h-2.5 stroke-[3]" />}
             </span>
@@ -3402,7 +3629,7 @@ function CreateEventContent() {
 
                                 {trabalhosNaoSeAplica ? (
                                     <div className="p-8 text-center bg-white dark:bg-[#071321]/40 rounded-2xl border border-dashed border-slate-200 dark:border-blue-900/40 space-y-2">
-                                        <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-100 dark:border-blue-900/40">
                                             <FileText className="w-6 h-6" />
                                         </div>
                                         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -5540,55 +5767,6 @@ function CreateEventContent() {
                             </div>
                         )}
 
-                        {/* 12. Financeiro */}
-                        {activeTab === "financeiro" && (
-                            <div className="space-y-6 animate-in fade-in">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-blue-900/40">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                                            <Landmark className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Dados Bancários e Repasses</h2>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Dados da conta para liquidação e repasse dos valores das inscrições.</p>
-                                        </div>
-                                    </div>
-                                    <NaoSeAplicaToggle state={bancarioNaoSeAplica} setState={setBancarioNaoSeAplica} />
-                                </div>
-
-                                {!bancarioNaoSeAplica && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>Nome do Banco</label>
-                                                <input type="text" placeholder="Ex: Banco do Brasil" value={dadosBancarios.banco} onChange={e => setDadosBancarios({ ...dadosBancarios, banco: e.target.value })} className={inputClass} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>Agência</label>
-                                                <input type="text" placeholder="0000-0" value={dadosBancarios.agencia} onChange={e => setDadosBancarios({ ...dadosBancarios, agencia: e.target.value })} className={inputClass} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>Conta Corrente</label>
-                                                <input type="text" placeholder="0000000-0" value={dadosBancarios.conta} onChange={e => setDadosBancarios({ ...dadosBancarios, conta: e.target.value })} className={inputClass} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>Chave PIX</label>
-                                                <input type="text" placeholder="CNPJ, E-mail ou Telefone" value={dadosBancarios.chavePix} onChange={e => setDadosBancarios({ ...dadosBancarios, chavePix: e.target.value })} className={inputClass} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>Nome Completo do Titular</label>
-                                                <input type="text" placeholder="Nome conforme cadastro bancário" value={dadosBancarios.titular} onChange={e => setDadosBancarios({ ...dadosBancarios, titular: e.target.value })} className={inputClass} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className={labelClass}>CPF ou CNPJ do Titular</label>
-                                                <input type="text" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={dadosBancarios.documentoTitular} onChange={e => setDadosBancarios({ ...dadosBancarios, documentoTitular: e.target.value })} className={inputClass} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
                     </div>
 
                     {/* Rodapé de Navegação / Ações */}
@@ -5623,7 +5801,7 @@ function CreateEventContent() {
                         ) : (
                             <button
                                 type="button"
-                                onClick={() => goToTab(currentTabIndex + 1)}
+                                onClick={handleAvancarEtapa}
                                 className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 transition-all cursor-pointer"
                             >
                                 Próxima Etapa
@@ -5634,6 +5812,54 @@ function CreateEventContent() {
 
                 </div>
             </div>
+
+            {/* Modal de Validação Obrigatória de Seção / "Não se aplica" */}
+            {modalPendencia && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/60 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-start gap-3.5">
+                            <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/80 dark:border-blue-900/50 shadow-xs">
+                                <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+                            </div>
+                            <div className="space-y-1 flex-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                                    {modalPendencia.subtitulo}
+                                </span>
+                                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                                    {modalPendencia.titulo}
+                                </h3>
+                                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed pt-0.5">
+                                    {modalPendencia.descricao}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321]/70 border border-slate-200/80 dark:border-blue-900/30 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Para evitar que o evento seja publicado com informações incompletas por descuido, é necessário <strong>preencher os dados</strong> ou <strong>ativar a opção &quot;Não se aplica&quot;</strong> caso este recurso não seja utilizado.
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setModalPendencia(null)}
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-blue-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#071321] text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                            >
+                                Vou Preencher os Dados
+                            </button>
+                            {modalPendencia.temNaoSeAplica && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleHabilitarNaoSeAplica(modalPendencia.secaoKey, false)}
+                                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    Habilitar &quot;Não se aplica&quot;
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }
