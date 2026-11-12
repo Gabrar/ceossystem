@@ -41,18 +41,20 @@ function CreateEventContent() {
     const [existingImg, setExistingImg] = useState("");
     const [loadingExisting, setLoadingExisting] = useState(false);
 
-    const isPromotor = userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor";
     const statusSubconta = verificarStatusSubconta(userData);
+    const isAdmin = statusSubconta.isAdmin;
+    const isPromotor = userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor";
+    const podeCriarEvento = isPromotor || isAdmin;
 
     useEffect(() => {
         if (!authLoading) {
             if (!user) {
                 router.replace("/login");
-            } else if (!isPromotor) {
+            } else if (!podeCriarEvento) {
                 router.replace("/eventos");
             }
         }
-    }, [user, isPromotor, authLoading, router]);
+    }, [user, podeCriarEvento, authLoading, router]);
 
     // 1. Básicas
     const [nomeEvento, setNomeEvento] = useState("");
@@ -1494,8 +1496,8 @@ function CreateEventContent() {
 
     // --- Salvamento ---
     const handleSaveEvent = async () => {
-        // Bloqueio obrigatório: Promotor deve possuir subconta Asaas ativa para criar novo evento
-        if (!isEditing && isPromotor && !statusSubconta.isAtiva) {
+        // Bloqueio obrigatório: Promotor (não administrador) deve possuir subconta Asaas ativa para criar novo evento
+        if (!isEditing && !isAdmin && isPromotor && !statusSubconta.isAtiva) {
             alert(
                 "Para poder criar evento, a sua conta no Asaas tem que ser criada primeiro. A criação de eventos só é liberada quando a situação do cadastro estiver completa (conta ativa)."
             );
@@ -2046,8 +2048,8 @@ function CreateEventContent() {
         );
     }
 
-    // 3. Autenticado mas sem perfil de Promotor -> Permissão Insuficiente
-    if (!isPromotor) {
+    // 3. Autenticado mas sem perfil de Promotor ou Admin -> Permissão Insuficiente
+    if (!podeCriarEvento) {
         return (
             <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex flex-col items-center justify-center p-4">
                 <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 shadow-xl text-center space-y-4 animate-in fade-in">
@@ -2071,8 +2073,8 @@ function CreateEventContent() {
         );
     }
 
-    // 4. Promotor sem subconta Asaas ativa tentando CRIAR novo evento
-    if (!isEditing && isPromotor && !statusSubconta.isAtiva) {
+    // 4. Promotor (não administrador) sem subconta Asaas ativa tentando CRIAR novo evento
+    if (!isEditing && !isAdmin && isPromotor && !statusSubconta.isAtiva) {
         return (
             <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] flex flex-col items-center justify-center p-4">
                 <div className="max-w-lg w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200/90 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 text-center space-y-5 animate-in fade-in">

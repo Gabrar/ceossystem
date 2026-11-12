@@ -202,7 +202,7 @@ export default function DashboardPage() {
           </p>
 
           <div className="pt-2 flex flex-wrap gap-3">
-            {isPromotor && (
+            {(isPromotor || statusSubconta.isAdmin) && (
               <button
                 type="button"
                 onClick={() => {

@@ -216,8 +216,8 @@ export default function PainelLayout({ children }: PainelLayoutProps) {
             </button>
           </div>
 
-          {/* Botão de Criação Rápida para Promotores */}
-          {isPromotor && (
+          {/* Botão de Criação Rápida para Promotores e Administradores */}
+          {(isPromotor || statusSubconta.isAdmin) && (
             <button
               type="button"
               onClick={() => {

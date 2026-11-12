@@ -143,7 +143,7 @@ export default function EventosPage() {
                 )}
               </div>
 
-              {(userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor") && (
+              {(userData?.tipoUsuario === "promotor" || userData?.tipo_usuario === "promotor" || userData?.role === "promotor" || statusSubconta.isAdmin) && (
                 <button
                   type="button"
                   onClick={() => {

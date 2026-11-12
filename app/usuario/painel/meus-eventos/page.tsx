@@ -146,7 +146,7 @@ export default function MeusEventosPage() {
           </p>
         </div>
 
-        {isPromotor && (
+        {(isPromotor || statusSubconta.isAdmin) && (
           <button
             type="button"
             onClick={() => {
@@ -244,7 +244,7 @@ export default function MeusEventosPage() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
 
-                  {isPromotor && (
+                  {(isPromotor || statusSubconta.isAdmin) && (
                     <>
                       <Link
                         href={`/usuario/painel/analytics?eventoId=${evento.id}`}

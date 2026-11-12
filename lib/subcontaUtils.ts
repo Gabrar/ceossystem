@@ -36,7 +36,10 @@ export function verificarStatusSubconta(userData: any): StatusSubconta {
   const isAdmin = Boolean(
     userData?.isAdmin ||
     userData?.role === "admin" ||
-    userData?.role === "dono"
+    userData?.role === "dono" ||
+    userData?.role === "administrador" ||
+    userData?.tipoUsuario === "admin" ||
+    userData?.tipo_usuario === "admin"
   );
 
   // Administradores da plataforma possuem acesso mestre
