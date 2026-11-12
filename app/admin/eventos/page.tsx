@@ -364,6 +364,7 @@ export default function AdminEventosPage() {
             <p className="text-xs text-slate-400">Carregando eventos do sistema...</p>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -540,11 +541,12 @@ export default function AdminEventosPage() {
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* BARRA DE PAGINAÇÃO DE EVENTOS */}
-            {eventosFiltrados.length > 0 && (
-              <div className="p-4 border-t border-blue-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-[#071321]/60">
-                <div className="flex flex-wrap items-center gap-3 text-slate-400">
+          {/* BARRA DE PAGINAÇÃO DE EVENTOS */}
+          {eventosFiltrados.length > 0 && (
+            <div className="p-4 border-t border-blue-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-[#071321]/60">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-slate-400 text-center sm:text-left">
                   <span>
                     Mostrando <strong className="text-white">{(paginaEventos - 1) * itensPorPaginaEventos + 1}</strong> a{" "}
                     <strong className="text-white">
@@ -570,7 +572,7 @@ export default function AdminEventosPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
                   <button
                     onClick={() => setPaginaEventos(1)}
                     disabled={paginaEventos === 1}
@@ -635,15 +637,15 @@ export default function AdminEventosPage() {
                   </button>
                 </div>
               </div>
-            )}
-          </div>
+          )}
+          </>
         )}
       </div>
 
       {/* MODAL 1: MUDAR TAXA CÉOS */}
       {modalTaxaEvento && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setModalTaxaEvento(null)}
               className="absolute right-5 top-5 p-1.5 rounded-lg text-slate-400 hover:text-white"
@@ -887,7 +889,7 @@ export default function AdminEventosPage() {
       {/* MODAL 3: EXCLUIR EVENTO */}
       {modalExcluirEvento && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-rose-500/30 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative text-center">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-rose-500/30 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -1121,7 +1123,7 @@ export default function AdminEventosPage() {
                     de <strong className="text-white">{inscricoesModalFiltradas.length}</strong> participantes
                   </span>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
                     <span className="text-slate-500">Por página:</span>
                     <select
                       value={itensPorPaginaInscricoesModal}
@@ -1138,7 +1140,7 @@ export default function AdminEventosPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-center gap-1">
                   <button
                     type="button"
                     onClick={() => setPaginaInscricoesModal(1)}

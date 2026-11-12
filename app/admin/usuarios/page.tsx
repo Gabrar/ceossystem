@@ -433,7 +433,7 @@ export default function AdminUsuariosPage() {
       {activeTab === "admins" ? (
         /* TABELA DE ADMINISTRADORES DA PASTA /admins */
         <div className="bg-[#0c1e33] rounded-3xl border border-amber-500/30 shadow-xl overflow-hidden space-y-4 p-5">
-          <div className="flex items-center justify-between pb-3 border-b border-blue-900/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-900/30">
             <div>
               <h3 className="font-montserrat font-bold text-white text-base flex items-center gap-2">
                 <Crown className="w-4 h-4 text-amber-400" />
@@ -502,6 +502,7 @@ export default function AdminUsuariosPage() {
               <p className="text-xs text-slate-400">Carregando usuários do sistema...</p>
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -650,11 +651,12 @@ export default function AdminUsuariosPage() {
                   )}
                 </tbody>
               </table>
+            </div>
 
-              {/* BARRA DE PAGINAÇÃO DE USUÁRIOS */}
-              {usuariosFiltrados.length > 0 && (
-                <div className="p-4 border-t border-blue-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-[#071321]/60">
-                  <div className="flex flex-wrap items-center gap-3 text-slate-400">
+            {/* BARRA DE PAGINAÇÃO DE USUÁRIOS */}
+            {usuariosFiltrados.length > 0 && (
+              <div className="p-4 border-t border-blue-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-[#071321]/60">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-slate-400 text-center sm:text-left">
                     <span>
                       Mostrando <strong className="text-white">{(paginaAtual - 1) * itensPorPagina + 1}</strong> a{" "}
                       <strong className="text-white">
@@ -681,7 +683,7 @@ export default function AdminUsuariosPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
                     <button
                       onClick={() => setPaginaAtual(1)}
                       disabled={paginaAtual === 1}
@@ -746,8 +748,8 @@ export default function AdminUsuariosPage() {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+            )}
+            </>
           )}
         </div>
       )}
@@ -755,7 +757,7 @@ export default function AdminUsuariosPage() {
       {/* MODAL: AJUSTAR TAXA CÉOS DO PROMOTOR (SPLIT ASAAS) */}
       {modalTaxaPromotor && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setModalTaxaPromotor(null)}
               className="absolute right-5 top-5 p-1.5 rounded-lg text-slate-400 hover:text-white"
@@ -889,7 +891,7 @@ export default function AdminUsuariosPage() {
       {/* MODAL: ALTERAR PERFIL / TIPO DE USUÁRIO */}
       {modalEditarPerfilUsuario && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-blue-900/50 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-blue-900/50 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setModalEditarPerfilUsuario(null)}
               className="absolute right-5 top-5 p-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer"

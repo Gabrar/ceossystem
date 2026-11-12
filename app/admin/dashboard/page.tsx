@@ -1169,7 +1169,7 @@ export default function AdminDashboardPage() {
       {/* MODAL PARA AJUSTAR TAXA CÉOS DO EVENTO */}
       {eventoAjustarTaxa && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setEventoAjustarTaxa(null)}
               className="absolute right-5 top-5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

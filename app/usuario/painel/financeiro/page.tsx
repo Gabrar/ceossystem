@@ -1197,7 +1197,7 @@ export default function FinanceiroPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* COLUNA 1: MINHAS CHAVES PIX */}
                 <div className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-blue-900/30 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-blue-900/30 pb-4">
                     <div className="flex items-center gap-2.5">
                       <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                         <Key className="w-4 h-4" />
@@ -1416,7 +1416,7 @@ export default function FinanceiroPage() {
 
               {/* HISTÓRICO DE TRANSFERÊNCIAS PIX */}
               <div className="p-6 rounded-3xl bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-blue-900/30 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-blue-900/30 pb-4">
                   <div className="flex items-center gap-2.5">
                     <span className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                       <History className="w-4 h-4" />

@@ -233,9 +233,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </button>
 
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                <Crown className="w-3 h-3" />
-                <span>ADMINISTRAÇÃO CÉOS</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 whitespace-nowrap">
+                <Crown className="w-3 h-3 shrink-0" />
+                <span className="sm:hidden">ADMIN CÉOS</span>
+                <span className="hidden sm:inline">ADMINISTRAÇÃO CÉOS</span>
               </span>
               <span className="text-slate-500 hidden sm:inline">•</span>
               <span className="text-xs text-slate-400 hidden md:inline">

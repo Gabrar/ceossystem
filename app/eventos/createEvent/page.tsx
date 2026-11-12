@@ -5772,7 +5772,7 @@ function CreateEventContent() {
                     </div>
 
                     {/* Rodapé de Navegação / Ações */}
-                    <div className="bg-slate-50/90 dark:bg-[#071321]/80 border-t border-slate-200 dark:border-blue-900/40 px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
+                    <div className="bg-slate-50/90 dark:bg-[#071321]/80 border-t border-slate-200 dark:border-blue-900/40 px-4 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
                         <button
                             type="button"
                             onClick={() => goToTab(currentTabIndex - 1)}

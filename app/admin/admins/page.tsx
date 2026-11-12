@@ -272,7 +272,7 @@ export default function AdminAdminsPage() {
       {/* MODAL: CADASTRAR NOVO ADMIN */}
       {modalNovoAdmin && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-amber-500/30 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setModalNovoAdmin(false)}
               className="absolute right-5 top-5 p-1.5 rounded-lg text-slate-400 hover:text-white"
@@ -385,7 +385,7 @@ export default function AdminAdminsPage() {
       {/* MODAL: CONFIRMAR EXCLUSÃO DE ADMIN */}
       {adminExcluir && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0c1e33] border border-rose-500/30 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+          <div className="max-w-md w-full bg-[#0c1e33] border border-rose-500/30 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
