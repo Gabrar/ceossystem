@@ -53,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#fafafa] dark:bg-[#0a1929] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      <body className="min-h-full flex flex-col overflow-x-clip bg-[#fafafa] dark:bg-[#0a1929] text-slate-900 dark:text-slate-100 transition-colors duration-200">
         <AuthProvider>
           <Analytics />
           <Navbar />

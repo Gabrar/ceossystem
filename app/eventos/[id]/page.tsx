@@ -790,7 +790,7 @@ export default function EventoDetailsPage({
 
         {/* Hero Banner do Evento com Imagem e Identificação */}
         <section id="hero" className="relative w-full rounded-3xl overflow-hidden border border-slate-200/90 dark:border-blue-900/40 bg-white dark:bg-[#0c1e33] shadow-lg">
-          <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[420px] bg-slate-900">
+          <div className="relative w-full min-h-[270px] sm:min-h-[320px] md:min-h-[384px] lg:min-h-[420px] bg-slate-900 flex flex-col justify-end">
             <Image
               src={evento.img}
               alt={evento.titulo}
@@ -803,7 +803,7 @@ export default function EventoDetailsPage({
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent" />
 
             {/* Conteúdo sobreposto na imagem */}
-            <div className="absolute inset-0 p-6 sm:p-8 md:p-10 flex flex-col justify-end text-white">
+            <div className="relative z-10 p-5 sm:p-8 md:p-10 flex flex-col justify-end text-white">
               {/* Badges Flutuantes */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 {(() => {
@@ -1752,7 +1752,7 @@ export default function EventoDetailsPage({
       {/* Modal de Confirmação de Exclusão */}
       {modalExcluir && evento && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6" />
@@ -1815,7 +1815,7 @@ export default function EventoDetailsPage({
       {/* Modal de Acesso Restrito a Não-Inscritos */}
       {modalAcessoRestrito && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center shrink-0">
                 <Lock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -1891,7 +1891,7 @@ export default function EventoDetailsPage({
       {/* Modal de Credenciamento */}
       {modalCredenciamento && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-7 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -1952,7 +1952,7 @@ export default function EventoDetailsPage({
       {/* Modal de Certificados */}
       {modalCertificado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
               <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
                 <Award className="w-5 h-5" />

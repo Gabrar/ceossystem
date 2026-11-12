@@ -356,7 +356,7 @@ export default function InscricoesPage() {
       {/* Modal / Visualizador de Credencial & QR Code */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="w-full max-w-sm bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 text-center space-y-4 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-6 text-center space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="inline-flex p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
               <QrCode className="w-8 h-8" />
             </div>

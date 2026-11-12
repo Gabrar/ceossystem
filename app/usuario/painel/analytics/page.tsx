@@ -1421,7 +1421,7 @@ function AnalyticsContent() {
                     <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-semibold">
                       Resultado da Avaliação (3 opções)
                     </span>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {(["Aceito", "Aceito com ressalvas", "Recusado"] as const).map((op) => (
                         <button
                           key={op}

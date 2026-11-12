@@ -57,13 +57,13 @@ export default function Navbar() {
 
     return (
         <nav 
-            className={`sticky top-0 z-50 bg-white/95 dark:bg-[#071321]/95 backdrop-blur-md py-3 sm:py-3.5 px-4 sm:px-8 flex justify-between items-center gap-3 sm:gap-6 border-b border-slate-200/90 dark:border-blue-400/10 transition-all duration-300 ease-in-out ${
+            className={`sticky top-0 z-50 bg-white/95 dark:bg-[#071321]/95 backdrop-blur-md py-3 sm:py-3.5 px-3 sm:px-8 flex justify-between items-center gap-2 sm:gap-6 border-b border-slate-200/90 dark:border-blue-400/10 transition-all duration-300 ease-in-out ${
                 isVisible 
                     ? "translate-y-0 opacity-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_35px_-8px_rgba(1,6,15,0.7)]" 
                     : "-translate-y-full opacity-0 pointer-events-none shadow-none"
             }`}
         >
-            <Link href="/" className="shrink-0 block relative w-[160px] h-[36px] sm:w-[200px] sm:h-[44px]">
+            <Link href="/" className="shrink-0 block relative w-[125px] h-[30px] sm:w-[200px] sm:h-[44px]">
                 {/* Logo Escura para Tema Claro */}
                 <Image
                     src="/assets/logo-black.png"

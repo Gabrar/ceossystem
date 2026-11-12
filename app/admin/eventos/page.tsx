@@ -1042,7 +1042,7 @@ export default function AdminEventosPage() {
             </div>
 
             {/* Tabela dos Documentos de Inscrição */}
-            <div className="flex-1 overflow-y-auto border border-blue-900/30 rounded-2xl min-h-[220px]">
+            <div className="flex-1 overflow-auto border border-blue-900/30 rounded-2xl min-h-[220px]">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 bg-[#071321] border-b border-blue-900/40 text-slate-400 font-semibold z-10">
                   <tr>

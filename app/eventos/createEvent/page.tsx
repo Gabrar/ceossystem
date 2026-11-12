@@ -2132,7 +2132,7 @@ function CreateEventContent() {
     }
 
     return (
-        <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] py-8 sm:py-10 px-4 sm:px-6 lg:px-8 flex justify-center transition-colors">
+        <main className="min-h-[calc(100vh-73px)] bg-[#fafafa] dark:bg-[#0a1929] py-5 sm:py-10 px-3 sm:px-6 lg:px-8 flex justify-center transition-colors">
             <div className="max-w-5xl w-full space-y-6">
 
                 {/* Header Principal da Página */}
@@ -2230,7 +2230,7 @@ function CreateEventContent() {
                     </div>
 
                     {/* Conteúdo Dinâmico da Sessão Ativa */}
-                    <div className="p-5 sm:p-8 space-y-6">
+                    <div className="p-4 sm:p-6 md:p-8 space-y-6">
 
                         {/* 1. Básicas */}
                         {activeTab === "basicas" && (
@@ -3644,40 +3644,40 @@ function CreateEventContent() {
                                 ) : (
                                     <div className="space-y-6">
                                         {/* Barra de Seleção das 3 Sub-Áreas */}
-                                        <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-[#071321] border border-slate-200 dark:border-blue-900/40">
                                             <button
                                                 type="button"
                                                 onClick={() => setSubTabTrabalhos("configurar")}
-                                                className={`flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "configurar"
+                                                className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "configurar"
                                                     ? "bg-[#1e40af] text-white shadow-md shadow-blue-900/20"
                                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
                                                     }`}
                                             >
-                                                <Settings className="w-4 h-4" />
+                                                <Settings className="w-4 h-4 shrink-0" />
                                                 <span>Configurar Submissão</span>
                                             </button>
 
                                             <button
                                                 type="button"
                                                 onClick={() => setSubTabTrabalhos("areas")}
-                                                className={`flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "areas"
+                                                className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "areas"
                                                     ? "bg-[#1e40af] text-white shadow-md shadow-blue-900/20"
                                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
                                                     }`}
                                             >
-                                                <Layers className="w-4 h-4" />
+                                                <Layers className="w-4 h-4 shrink-0" />
                                                 <span>Áreas de Avaliação</span>
                                             </button>
 
                                             <button
                                                 type="button"
                                                 onClick={() => setSubTabTrabalhos("avaliacao_dia")}
-                                                className={`flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "avaliacao_dia"
+                                                className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${subTabTrabalhos === "avaliacao_dia"
                                                     ? "bg-[#1e40af] text-white shadow-md shadow-blue-900/20"
                                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5"
                                                     }`}
                                             >
-                                                <Presentation className="w-4 h-4" />
+                                                <Presentation className="w-4 h-4 shrink-0" />
                                                 <span>Avaliação do Dia do Evento</span>
                                             </button>
                                         </div>
@@ -3690,7 +3690,7 @@ function CreateEventContent() {
                                                 {/* Card Principal de Configuração com Header Azul Integrado */}
                                                 <div className="border border-slate-200 dark:border-blue-900/40 rounded-2xl bg-white dark:bg-[#0c1e33] overflow-hidden shadow-sm">
                                                     {/* Header Azul Integrado */}
-                                                    <div className="bg-[#1e3a8a] text-white px-6 py-5 flex items-start sm:items-center gap-3.5">
+                                                    <div className="bg-[#1e3a8a] text-white px-4 py-4 sm:px-6 sm:py-5 flex items-start sm:items-center gap-3.5">
                                                         <div className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center shrink-0">
                                                             <Settings className="w-5 h-5" />
                                                         </div>
@@ -3704,7 +3704,7 @@ function CreateEventContent() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-6 sm:p-7 space-y-6">
+                                                    <div className="p-4 sm:p-6 md:p-7 space-y-6">
                                                         {/* Datas de Início e Fim */}
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <div className="space-y-1.5">
@@ -3905,7 +3905,7 @@ function CreateEventContent() {
                                                                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                                         O formulário do autor exibirá duas opções com caixas de texto proporcionais ao limite de letras de cada formato.
                                                                     </p>
-                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                         <div>
                                                                             <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                                                                                 Resumo Simples (letras)
@@ -3944,7 +3944,7 @@ function CreateEventContent() {
                                                                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                                         Cada resumo submetido será encaminhado automaticamente para avaliadores/professores que marcaram a mesma área de interesse.
                                                                     </p>
-                                                                    <div className="grid grid-cols-3 gap-2.5 pt-0.5">
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-0.5">
                                                                         {(["1", "2", "3"] as const).map(qtd => {
                                                                             const ativo = qtdAvaliadoresPorResumo === qtd;
                                                                             return (
@@ -4157,7 +4157,7 @@ function CreateEventContent() {
                                                 {/* Card Principal: Gerenciar Áreas de Avaliação com Header Azul Integrado */}
                                                 <div className="border border-slate-200 dark:border-blue-900/40 rounded-2xl bg-white dark:bg-[#0c1e33] overflow-hidden shadow-sm">
                                                     {/* Header Azul Integrado */}
-                                                    <div className="bg-[#1e3a8a] text-white px-6 py-5 flex items-start sm:items-center gap-3.5">
+                                                    <div className="bg-[#1e3a8a] text-white px-4 py-4 sm:px-6 sm:py-5 flex items-start sm:items-center gap-3.5">
                                                         <div className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center shrink-0">
                                                             <Layers className="w-5 h-5" />
                                                         </div>
@@ -4171,7 +4171,7 @@ function CreateEventContent() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-6 sm:p-7 space-y-6">
+                                                    <div className="p-4 sm:p-6 md:p-7 space-y-6">
                                                         {/* Input Nome da Área + Botão Adicionar */}
                                                         <div className="space-y-1.5">
                                                             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
@@ -5569,7 +5569,7 @@ function CreateEventContent() {
                                                 {/* Modal de Avaliação Pré-Congresso pelo Admin */}
                                                 {modalAvaliarPreAdmin && (
                                                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                                                        <div className="bg-white dark:bg-[#0c1e33] rounded-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-blue-900/50 shadow-2xl space-y-4">
+                                                        <div className="bg-white dark:bg-[#0c1e33] rounded-2xl max-w-lg w-full p-5 sm:p-6 border border-slate-200 dark:border-blue-900/50 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
                                                             <div className="flex items-center justify-between border-b border-slate-100 dark:border-blue-900/40 pb-3">
                                                                 <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                                                                     Avaliação Pré-Congresso do Resumo
@@ -5669,7 +5669,7 @@ function CreateEventContent() {
                                                 {/* Modal para Adicionar Avaliação no Dia (Múltiplos Avaliadores) */}
                                                 {modalAvaliarDiaAdmin && (
                                                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                                                        <div className="bg-white dark:bg-[#0c1e33] rounded-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-blue-900/50 shadow-2xl space-y-4">
+                                                        <div className="bg-white dark:bg-[#0c1e33] rounded-2xl max-w-lg w-full p-5 sm:p-6 border border-slate-200 dark:border-blue-900/50 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
                                                             <div className="flex items-center justify-between border-b border-slate-100 dark:border-blue-900/40 pb-3">
                                                                 <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                                                                     Lançar Nota de Apresentação (Múltiplos Avaliadores)
@@ -5818,7 +5818,7 @@ function CreateEventContent() {
             {/* Modal de Validação Obrigatória de Seção / "Não se aplica" */}
             {modalPendencia && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/60 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/60 rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                         <div className="flex items-start gap-3.5">
                             <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/80 dark:border-blue-900/50 shadow-xs">
                                 <AlertCircle className="w-5 h-5 stroke-[2.2]" />

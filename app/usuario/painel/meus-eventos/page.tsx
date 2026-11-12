@@ -322,7 +322,7 @@ export default function MeusEventosPage() {
       {/* Modal de Confirmação de Exclusão */}
       {eventoParaExcluir && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#0c1e33] border border-slate-200 dark:border-blue-900/40 rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6" />
