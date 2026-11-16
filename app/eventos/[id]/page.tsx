@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEventRegistrationStatus, getStatusBadgeConfig, formatDateTimeFriendly } from "@/lib/eventStatus";
 import { verificarUsuarioInscritoNoEvento, InscricaoNormalizada } from "@/lib/inscricoes";
+import { enviarEmailIngressoCredenciamento } from "@/lib/mail";
 import ModalInscricaoEvento from "@/components/ModalInscricaoEvento";
 import ModalSubmissaoTrabalho from "@/components/ModalSubmissaoTrabalho";
 import {
@@ -538,6 +539,20 @@ export default function EventoDetailsPage({
         createdAt: new Date().toISOString(),
       };
       await addDoc(collection(db, "inscricoes"), novoIngresso);
+      
+      // Envia e-mail de credencial para o participante
+      if (user.email) {
+        enviarEmailIngressoCredenciamento({
+          para: user.email,
+          nomeDestinatario: userData?.nome || user.displayName || "Participante",
+          eventoTitulo: evento?.titulo || "Evento Científico",
+          codigoIngresso: novoIngresso.codigoIngresso,
+          lote: novoIngresso.lote,
+          dataEvento: evento?.data || "",
+          localEvento: `${evento?.localNome || ""} ${evento?.cidadeEstado || ""}`,
+        }).catch((e) => console.warn("Erro ao disparar credencial pós-inscrição gratuita:", e));
+      }
+
       setIsInscrito(true);
       setModalAcessoRestrito(false);
       alert("Inscrição confirmada com sucesso! A barra do evento está totalmente liberada para você submeter trabalhos, credenciar-se e acessar os recursos exclusivos.");

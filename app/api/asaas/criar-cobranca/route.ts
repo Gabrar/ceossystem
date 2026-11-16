@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { criarOuBuscarClienteAsaas, criarCobrancaAsaas, SplitItemAsaas } from "@/lib/asaas";
+import { enviarEmailIngressoCredenciamento } from "@/lib/mail";
 
 export async function POST(req: Request) {
   try {
@@ -101,6 +102,15 @@ export async function POST(req: Request) {
       };
 
       const docRef = await addDoc(collection(db, "inscricoes"), novaInscricaoGratuita);
+
+      // Dispara e-mail de confirmação com a credencial/código de ingresso
+      enviarEmailIngressoCredenciamento({
+        para: email,
+        nomeDestinatario: nome,
+        eventoTitulo: eventoTitulo || "Evento Científico",
+        codigoIngresso,
+        lote: loteNome || "Inscrição Gratuita",
+      }).catch((e) => console.warn("Erro ao disparar e-mail de ingresso gratuito:", e));
 
       return NextResponse.json({
         success: true,

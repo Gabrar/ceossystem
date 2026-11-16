@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { enviarEmailIngressoCredenciamento } from "@/lib/mail";
 
 /**
  * Webhook do Asaas — recebe notificações de mudança de status de pagamento
@@ -101,6 +102,27 @@ export async function POST(req: Request) {
       asaasPaymentId: paymentId,
       webhookUpdatedAt: new Date().toISOString(),
     });
+
+    // Se o pagamento foi confirmado, envia automaticamente a credencial com código por e-mail
+    if (novoStatus === "Confirmada") {
+      try {
+        const inscSnap = await getDoc(inscricaoRef);
+        if (inscSnap.exists()) {
+          const inscData = inscSnap.data();
+          if (inscData?.email && inscData?.codigoIngresso) {
+            enviarEmailIngressoCredenciamento({
+              para: inscData.email,
+              nomeDestinatario: inscData.nome || inscData.userName || "Participante",
+              eventoTitulo: inscData.eventoTitulo || "Evento Científico",
+              codigoIngresso: inscData.codigoIngresso,
+              lote: inscData.lote || "Inscrição Confirmada",
+            }).catch((err) => console.warn("Erro ao disparar credencial pós-webhook:", err));
+          }
+        }
+      } catch (errEmail) {
+        console.warn("Aviso ao buscar dados da inscrição para envio de e-mail:", errEmail);
+      }
+    }
 
     console.log(`Webhook Asaas: Inscrição ${inscricaoRef.id} atualizada → ${novoStatus} (${event})`);
 
