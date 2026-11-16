@@ -50,8 +50,8 @@ export default function Navbar() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [dropdownOpen]);
 
-    // Oculta a Navbar pública nas rotas de administração (/admin)
-    if (pathname?.startsWith("/admin")) {
+    // Oculta a Navbar pública nas rotas de administração, credenciamento e check-in do participante
+    if (pathname?.startsWith("/admin") || pathname?.startsWith("/credenciamento") || pathname?.startsWith("/checkin")) {
         return null;
     }
 

@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   X,
   BarChart3,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -246,6 +247,16 @@ export default function MeusEventosPage() {
 
                   {(isPromotor || statusSubconta.isAdmin) && (
                     <>
+                      <Link
+                        href={`/credenciamento/${evento.id}`}
+                        target="_blank"
+                        className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-emerald-200/70 dark:border-emerald-800/50 cursor-pointer shadow-2xs"
+                        title="Abrir tela dedicada de credenciamento do evento"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>Credenciar</span>
+                      </Link>
+
                       <Link
                         href={`/usuario/painel/analytics?eventoId=${evento.id}`}
                         className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-indigo-200/70 dark:border-indigo-800/50 cursor-pointer shadow-2xs"
