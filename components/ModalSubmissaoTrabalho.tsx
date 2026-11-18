@@ -21,6 +21,7 @@ import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { supabase } from "@/lib/supabase";
 import { AvaliadorEvento, selecionarAvaliadoresPorArea } from "@/lib/trabalhos";
+import { enviarEmailNotificacaoAvaliador } from "@/lib/mail";
 
 interface CoAutor {
   nome: string;
@@ -300,6 +301,8 @@ export default function ModalSubmissaoTrabalho({
                 id: d.id,
                 nome: data.nome || data.userName || emailAv,
                 email: emailAv,
+                cpf: data.cpf || data.documento_valor || "",
+                userId: data.userId || "",
                 areas: areasInsc,
                 instituicao: data.instituicao || "",
                 qualificacao: data.qualificacao || data.tipoParticipante || "",
@@ -326,19 +329,27 @@ export default function ModalSubmissaoTrabalho({
         });
       } catch {}
 
+      const nomesCoautores = coAutores.map((c) => c.nome.trim()).filter(Boolean);
+      const todosAutoresStr = [autorPrincipal, ...nomesCoautores].filter(Boolean).join(", ");
+
+      // Seleciona avaliadores com filtro rigoroso de conflito de interesses (nem autor principal, nem coautores, nem orientador)
       const avaliadoresDesignados = selecionarAvaliadoresPorArea(
         area,
         Array.from(mapaAvaliadores.values()),
         qtdAvaliadoresConfig,
-        user.email || "",
+        {
+          userId: user.uid,
+          userEmail: user.email || "",
+          autorPrincipal,
+          autores: resumoAutores.trim() || todosAutoresStr,
+          coAutores,
+          orientador: orientador.trim(),
+        },
         contagemCarga
       );
 
-      const nomesCoautores = coAutores.map((c) => c.nome.trim()).filter(Boolean);
-      const todosAutoresStr = [autorPrincipal, ...nomesCoautores].filter(Boolean).join(", ");
-
       // 4. Salvar no Firestore
-      await addDoc(collection(db, "trabalhos"), {
+      const novoTrabRef = await addDoc(collection(db, "trabalhos"), {
         eventoId,
         eventoTitulo,
         userId: user.uid,
@@ -370,6 +381,27 @@ export default function ModalSubmissaoTrabalho({
         createdAt: Date.now(),
         createdAtServer: serverTimestamp(),
       });
+
+      // 5. Notificar avaliadores designados por e-mail com link exclusivo da nova página de avaliação
+      const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+      const prazoFormatado = submissaoConfig?.dataFim
+        ? submissaoConfig.dataFim.split("-").reverse().join("/")
+        : undefined;
+
+      for (const av of avaliadoresDesignados) {
+        if (av.email) {
+          const linkAvaliacao = `${appBaseUrl}/avaliar/${novoTrabRef.id}?email=${encodeURIComponent(av.email)}`;
+          enviarEmailNotificacaoAvaliador({
+            para: av.email,
+            nomeAvaliador: av.nome,
+            eventoTitulo,
+            trabalhoTitulo: (titulo || resumoTitulo).trim(),
+            areaTrabalho: area,
+            linkAvaliacao,
+            prazoLimite: prazoFormatado,
+          }).catch((err) => console.warn("[EmailJS Notificação Avaliador falhou]:", err));
+        }
+      }
 
       const msgAvaliadores =
         avaliadoresDesignados.length > 0

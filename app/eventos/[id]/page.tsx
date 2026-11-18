@@ -178,6 +178,12 @@ interface EventoDetalhes {
     horaInicio?: string;
     dataFim?: string;
     horaFim?: string;
+    dataInicioAvaliacao?: string;
+    horaInicioAvaliacao?: string;
+    dataFimAvaliacao?: string;
+    horaFimAvaliacao?: string;
+    dataInicioAvaliacaoDateTime?: string;
+    dataFimAvaliacaoDateTime?: string;
     dataResultado?: string;
     areasAvaliacao?: string[];
     eixosTematicos?: Array<{ nome: string; descricao?: string }>;
@@ -1304,6 +1310,23 @@ export default function EventoDetailsPage({
                       <p className="text-sm font-bold text-slate-900 dark:text-white">
                         {evento.submissaoTrabalhos.dataFim.split("-").reverse().join("/")}
                         {evento.submissaoTrabalhos.horaFim && ` até às ${evento.submissaoTrabalhos.horaFim}`}
+                      </p>
+                    </div>
+                  )}
+                  {(evento.submissaoTrabalhos.dataInicioAvaliacao || evento.submissaoTrabalhos.dataFimAvaliacao || evento.submissaoTrabalhos.dataInicioAvaliacaoDateTime) && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#071321] border border-slate-200/80 dark:border-blue-900/40 space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold uppercase">Período de Avaliação</span>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        {evento.submissaoTrabalhos.dataInicioAvaliacao
+                          ? evento.submissaoTrabalhos.dataInicioAvaliacao.split("-").reverse().join("/")
+                          : evento.submissaoTrabalhos.dataInicioAvaliacaoDateTime
+                          ? new Date(evento.submissaoTrabalhos.dataInicioAvaliacaoDateTime).toLocaleDateString("pt-BR")
+                          : ""}
+                        {evento.submissaoTrabalhos.dataFimAvaliacao
+                          ? ` até ${evento.submissaoTrabalhos.dataFimAvaliacao.split("-").reverse().join("/")}`
+                          : evento.submissaoTrabalhos.dataFimAvaliacaoDateTime
+                          ? ` até ${new Date(evento.submissaoTrabalhos.dataFimAvaliacaoDateTime).toLocaleDateString("pt-BR")}`
+                          : ""}
                       </p>
                     </div>
                   )}

@@ -198,6 +198,8 @@ function CreateEventContent() {
     // Sub-área 1: Configurar Submissão
     const [inicioSubmissaoDateTime, setInicioSubmissaoDateTime] = useState("");
     const [fimSubmissaoDateTime, setFimSubmissaoDateTime] = useState("");
+    const [inicioAvaliacaoDateTime, setInicioAvaliacaoDateTime] = useState("");
+    const [fimAvaliacaoDateTime, setFimAvaliacaoDateTime] = useState("");
     const [instrucoesSubmissao, setInstrucoesSubmissao] = useState("");
     const [limiteTrabalhosAutor, setLimiteTrabalhosAutor] = useState("10");
     const [limiteTrabalhosCoautor, setLimiteTrabalhosCoautor] = useState("10");
@@ -527,6 +529,8 @@ function CreateEventContent() {
                     // Sub-área 1: Configurar Submissão
                     setInicioSubmissaoDateTime(st.dataInicioDateTime || (st.dataInicio ? `${st.dataInicio}T${st.horaInicio || "08:00"}` : ""));
                     setFimSubmissaoDateTime(st.dataFimDateTime || (st.dataFim ? `${st.dataFim}T${st.horaFim || "23:59"}` : ""));
+                    setInicioAvaliacaoDateTime(st.dataInicioAvaliacaoDateTime || (st.dataInicioAvaliacao ? `${st.dataInicioAvaliacao}T${st.horaInicioAvaliacao || "08:00"}` : ""));
+                    setFimAvaliacaoDateTime(st.dataFimAvaliacaoDateTime || (st.dataFimAvaliacao ? `${st.dataFimAvaliacao}T${st.horaFimAvaliacao || "23:59"}` : ""));
                     setInstrucoesSubmissao(st.instrucoes || st.normas || "");
 
                     if (st.limitesCategoria) {
@@ -1180,6 +1184,8 @@ function CreateEventContent() {
                     naoSeAplica: false,
                     dataInicioDateTime: inicioSubmissaoDateTime || "",
                     dataFimDateTime: fimSubmissaoDateTime || "",
+                    dataInicioAvaliacaoDateTime: inicioAvaliacaoDateTime || "",
+                    dataFimAvaliacaoDateTime: fimAvaliacaoDateTime || "",
                     instrucoes: instrucoesSubmissao || "",
                     qtdAvaliadoresPorResumo: Number(qtdAvaliadoresPorResumo) || 1,
                     limiteCaracteresSimples: Number(limiteCaracteresSimples) || 2500,
@@ -1217,6 +1223,10 @@ function CreateEventContent() {
                     horaInicio: inicioSubmissaoDateTime ? (inicioSubmissaoDateTime.split("T")[1] || "") : "",
                     dataFim: fimSubmissaoDateTime ? fimSubmissaoDateTime.split("T")[0] : "",
                     horaFim: fimSubmissaoDateTime ? (fimSubmissaoDateTime.split("T")[1] || "") : "",
+                    dataInicioAvaliacao: inicioAvaliacaoDateTime ? inicioAvaliacaoDateTime.split("T")[0] : "",
+                    horaInicioAvaliacao: inicioAvaliacaoDateTime ? (inicioAvaliacaoDateTime.split("T")[1] || "") : "",
+                    dataFimAvaliacao: fimAvaliacaoDateTime ? fimAvaliacaoDateTime.split("T")[0] : "",
+                    horaFimAvaliacao: fimAvaliacaoDateTime ? (fimAvaliacaoDateTime.split("T")[1] || "") : "",
                     eixosTematicos: areasFinais.map(a => ({ nome: a.nome, descricao: "" })),
                     normas: instrucoesSubmissao || "",
                     editalUrl: urlRegFinal,
@@ -1580,6 +1590,8 @@ function CreateEventContent() {
                 // Sub-área 1: Configurar Submissão
                 dataInicioDateTime: inicioSubmissaoDateTime,
                 dataFimDateTime: fimSubmissaoDateTime,
+                dataInicioAvaliacaoDateTime: inicioAvaliacaoDateTime,
+                dataFimAvaliacaoDateTime: fimAvaliacaoDateTime,
                 instrucoes: instrucoesSubmissao,
                 qtdAvaliadoresPorResumo: Number(qtdAvaliadoresPorResumo) || 1,
                 limiteCaracteresSimples: Number(limiteCaracteresSimples) || 2500,
@@ -1640,6 +1652,10 @@ function CreateEventContent() {
                 horaInicio: inicioSubmissaoDateTime ? (inicioSubmissaoDateTime.split("T")[1] || "") : "",
                 dataFim: fimSubmissaoDateTime ? fimSubmissaoDateTime.split("T")[0] : "",
                 horaFim: fimSubmissaoDateTime ? (fimSubmissaoDateTime.split("T")[1] || "") : "",
+                dataInicioAvaliacao: inicioAvaliacaoDateTime ? inicioAvaliacaoDateTime.split("T")[0] : "",
+                horaInicioAvaliacao: inicioAvaliacaoDateTime ? (inicioAvaliacaoDateTime.split("T")[1] || "") : "",
+                dataFimAvaliacao: fimAvaliacaoDateTime ? fimAvaliacaoDateTime.split("T")[0] : "",
+                horaFimAvaliacao: fimAvaliacaoDateTime ? (fimAvaliacaoDateTime.split("T")[1] || "") : "",
                 eixosTematicos: areasAvaliacao.map(a => ({ nome: a.nome, descricao: "" })),
                 normas: instrucoesSubmissao,
                 editalUrl: finalRegulamentoUrl,
@@ -3730,6 +3746,45 @@ function CreateEventContent() {
                                                                     onChange={e => setFimSubmissaoDateTime(e.target.value)}
                                                                     className={inputClass}
                                                                 />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Prazo de Avaliação dos Trabalhos (Início e Fim) */}
+                                                        <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-blue-900/30">
+                                                            <div>
+                                                                <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                                    <CalendarCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                                    <span>Prazo de Avaliação dos Trabalhos (Banca Científica)</span>
+                                                                </h4>
+                                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                    Período oficial em que os avaliadores e professores da comissão poderão emitir pareceres e notas nos resumos.
+                                                                </p>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                                        <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                                        <span>Início da Avaliação</span>
+                                                                    </label>
+                                                                    <input
+                                                                        type="datetime-local"
+                                                                        value={inicioAvaliacaoDateTime}
+                                                                        onChange={e => setInicioAvaliacaoDateTime(e.target.value)}
+                                                                        className={inputClass}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                                        <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                                        <span>Término da Avaliação</span>
+                                                                    </label>
+                                                                    <input
+                                                                        type="datetime-local"
+                                                                        value={fimAvaliacaoDateTime}
+                                                                        onChange={e => setFimAvaliacaoDateTime(e.target.value)}
+                                                                        className={inputClass}
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         </div>
 

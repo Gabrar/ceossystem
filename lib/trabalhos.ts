@@ -1,3 +1,5 @@
+import { Lora } from "next/font/google";
+
 export interface AvaliacaoPreCongresso {
   id: string;
   avaliadorId?: string;
@@ -28,10 +30,129 @@ export interface AvaliadorEvento {
   id: string;
   nome: string;
   email: string;
+  cpf?: string;
+  userId?: string;
   areas?: string[];
   areasInteresse?: string[];
   instituicao?: string;
   qualificacao?: string;
+}
+
+export interface DadosConflitoTrabalho {
+  userId?: string;
+  userEmail?: string;
+  autorPrincipal?: string;
+  autores?: string;
+  coAutores?: Array<{
+    nome?: string;
+    cpf?: string;
+    email?: string;
+  }>;
+  orientador?: string;
+}
+
+/**
+ * Verifica se um avaliador possui conflito de interesses com o trabalho científico.
+ * Bloqueia se o avaliador for o autor principal, coautor ou orientador do trabalho
+ * (verificação multi-nível por e-mail, CPF, UID e nome).
+ */
+export function isAvaliadorConflitoComTrabalho(
+  avaliador: { email?: string; nome?: string; cpf?: string; userId?: string },
+  trabalho: DadosConflitoTrabalho
+): boolean {
+  if (!avaliador || !trabalho) return false;
+
+  const avEmail = (avaliador.email || "").trim().toLowerCase();
+  const avUid = (avaliador.userId || "").trim();
+  const avCpf = (avaliador.cpf || "").replace(/\D/g, "");
+  const avNome = (avaliador.nome || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Conflito por UID do autor principal
+  if (avUid && trabalho.userId && avUid === trabalho.userId.trim()) {
+    return true;
+  }
+
+  // 2. Conflito por E-mail com o autor principal
+  if (avEmail && trabalho.userEmail && avEmail === trabalho.userEmail.trim().toLowerCase()) {
+    return true;
+  }
+
+  // 3. Conflito com Coautores (por e-mail, CPF ou Nome)
+  if (Array.isArray(trabalho.coAutores)) {
+    for (const co of trabalho.coAutores) {
+      if (!co) continue;
+      // E-mail do coautor
+      if (avEmail && co.email && avEmail === co.email.trim().toLowerCase()) {
+        return true;
+      }
+      // CPF do coautor
+      const coCpf = (co.cpf || "").replace(/\D/g, "");
+      if (avCpf && coCpf && avCpf === coCpf) {
+        return true;
+      }
+      // Nome do coautor
+      const coNome = (co.nome || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      if (avNome && coNome) {
+        if (avNome === coNome) return true;
+        // Se ambos tiverem pelo menos 2 partes no nome (nome e sobrenome) e baterem
+        if (avNome.length > 5 && coNome.length > 5 && (avNome.includes(coNome) || coNome.includes(avNome))) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 4. Conflito com o Orientador (por nome)
+  if (trabalho.orientador && avNome) {
+    const oriNome = trabalho.orientador
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (oriNome) {
+      if (avNome === oriNome) return true;
+      if (avNome.length > 5 && oriNome.length > 5 && (avNome.includes(oriNome) || oriNome.includes(avNome))) {
+        return true;
+      }
+    }
+  }
+
+  // 5. Conflito por nome com o Autor Principal
+  if (trabalho.autorPrincipal && avNome) {
+    const autorNome = trabalho.autorPrincipal
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (autorNome) {
+      if (avNome === autorNome) return true;
+      if (avNome.length > 5 && autorNome.length > 5 && (avNome.includes(autorNome) || autorNome.includes(avNome))) {
+        return true;
+      }
+    }
+  }
+
+  // 6. Conflito se a string compilada de autores contiver o nome completo do avaliador
+  if (trabalho.autores && avNome && avNome.length > 5) {
+    const todosAutores = trabalho.autores
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (todosAutores.includes(avNome)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export interface PeriodoConfig {
@@ -174,23 +295,36 @@ export function isTrabalhoComRessalvas(status?: string): boolean {
 
 /**
  * Distribui automaticamente um trabalho para N avaliadores (1, 2 ou 3) que tenham a mesma área de interesse,
+ * garantindo ausência de conflito de interesses (nem autor principal, nem coautores, nem orientador podem avaliar),
  * priorizando aqueles com menor carga de trabalhos atribuídos.
  */
 export function selecionarAvaliadoresPorArea(
   areaTrabalho: string,
   avaliadoresDisponiveis: AvaliadorEvento[],
   qtdAvaliadores: number,
-  emailAutor?: string,
+  autorOuConflito?: string | DadosConflitoTrabalho,
   contagemCargaAtual?: Record<string, number>
 ): Array<{ nome: string; email: string; area: string }> {
   const n = Math.max(1, Math.min(3, Number(qtdAvaliadores) || 1));
   const areaNorm = (areaTrabalho || "").trim().toLowerCase();
-  const autorEmailNorm = (emailAutor || "").trim().toLowerCase();
 
-  // Filtra avaliadores que não sejam o próprio autor e que tenham a mesma área de interesse
+  const conflitoData: DadosConflitoTrabalho =
+    typeof autorOuConflito === "string"
+      ? { userEmail: autorOuConflito }
+      : autorOuConflito || {};
+
+  // Filtra avaliadores que:
+  // 1. NÃO possuam conflito de interesses (não sejam autor principal, coautores ou orientador)
+  // 2. Tenham a mesma área de interesse do trabalho
   const compativeis = avaliadoresDisponiveis.filter((av) => {
     const avEmail = (av.email || "").trim().toLowerCase();
-    if (!avEmail || (autorEmailNorm && avEmail === autorEmailNorm)) return false;
+    if (!avEmail) return false;
+
+    // Checagem rigorosa de Conflito de Interesses
+    if (isAvaliadorConflitoComTrabalho(av, conflitoData)) {
+      return false;
+    }
+
     const listaAreasAv = av.areas || av.areasInteresse || [];
     return listaAreasAv.some((a) => {
       const aNorm = (a || "").trim().toLowerCase();

@@ -24,6 +24,7 @@ import {
   calcularNotaRanking,
   isTrabalhoAceito,
 } from "@/lib/trabalhos";
+import { enviarEmailNotificacaoAvaliador } from "@/lib/mail";
 import {
   Loader2,
   BarChart3,
@@ -126,6 +127,8 @@ function AnalyticsContent() {
               id: p.id,
               nome: p.nome,
               email: p.email,
+              cpf: raw.cpf || raw.documento_valor || p.cpf || "",
+              userId: raw.userId || "",
               areasInteresse: Array.isArray(raw.areasInteresseAvaliador) ? raw.areasInteresseAvaliador : [],
             });
           }
@@ -142,7 +145,14 @@ function AnalyticsContent() {
             t.eixoTematico,
             avaliadoresDisp,
             qtdAvs,
-            t.userEmail || "",
+            {
+              userId: rawT.userId || t.userId,
+              userEmail: t.userEmail || rawT.userEmail || "",
+              autorPrincipal: rawT.autorPrincipal || t.autores,
+              autores: t.autores,
+              coAutores: rawT.coAutores,
+              orientador: rawT.orientador,
+            },
             cargaAtual
           );
           if (selecionados.length > 0) {
@@ -157,6 +167,23 @@ function AnalyticsContent() {
               avaliadorNome: selecionados[0].nome,
               updatedAt: new Date().toISOString(),
             });
+
+            // Dispara e-mail para cada avaliador com link da página exclusiva de avaliação
+            const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+            for (const s of selecionados) {
+              if (s.email) {
+                const linkAvaliacao = `${appBaseUrl}/avaliar/${t.id}?email=${encodeURIComponent(s.email)}`;
+                enviarEmailNotificacaoAvaliador({
+                  para: s.email,
+                  nomeAvaliador: s.nome,
+                  eventoTitulo: analytics?.eventoTitulo || "Congresso Científico",
+                  trabalhoTitulo: t.titulo,
+                  areaTrabalho: t.eixoTematico,
+                  linkAvaliacao,
+                }).catch((err) => console.warn("[EmailJS Notificação Avaliador falhou]:", err));
+              }
+            }
+
             qtdDesignados++;
           }
         }

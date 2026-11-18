@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   FileText,
   Clock,
@@ -23,6 +24,7 @@ import {
   XCircle,
   RefreshCw,
   Tag,
+  Sliders,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -41,7 +43,9 @@ import {
   AvaliacaoPreCongresso,
   isTrabalhoAceito,
   isTrabalhoComRessalvas,
+  isAvaliadorConflitoComTrabalho,
 } from "@/lib/trabalhos";
+import { enviarEmailNotificacaoAvaliador } from "@/lib/mail";
 
 interface TrabalhoItem {
   id: string;
@@ -51,6 +55,10 @@ interface TrabalhoItem {
   evento: string;
   autores: string;
   userEmail?: string;
+  userId?: string;
+  autorPrincipal?: string;
+  orientador?: string;
+  coAutores?: Array<{ nome?: string; cpf?: string; email?: string }>;
   tipoResumo: "simples" | "expandido";
   status: string;
   dataSubmissao: string;
@@ -129,6 +137,10 @@ export default function TrabalhosPage() {
       evento: data.eventoTitulo || data.evento || "Congresso Científico",
       autores: data.autores || data.resumoAutores || data.autorPrincipal || "Autor Principal",
       userEmail: data.userEmail || "",
+      userId: data.userId || "",
+      autorPrincipal: data.autorPrincipal || data.autor || "",
+      orientador: data.orientador || "",
+      coAutores: Array.isArray(data.coAutores) ? data.coAutores : [],
       tipoResumo: data.tipoResumo === "expandido" ? "expandido" : "simples",
       status: data.status || "Em Avaliação",
       dataSubmissao: data.createdAt
@@ -229,12 +241,20 @@ export default function TrabalhosPage() {
       const todosTrabalhos = snapTodosTrabalhos.docs.map(mapDocToTrabalho);
 
       const emailLogado = (user.email || "").trim().toLowerCase();
+      const dadosAvaliadorLogado = {
+        email: emailLogado,
+        nome: userData?.nome || user.displayName || "",
+        cpf: userData?.cpf || "",
+        userId: user.uid,
+      };
 
       const paraAvaliar = todosTrabalhos.filter((t) => {
-        // Nunca avalia o próprio trabalho
-        if (t.userEmail && t.userEmail.trim().toLowerCase() === emailLogado) {
+        // Bloqueio rigoroso de Conflito de Interesses:
+        // Nunca avalia o próprio trabalho (autor principal), nem como coautor ou orientador
+        if (isAvaliadorConflitoComTrabalho(dadosAvaliadorLogado, t)) {
           return false;
         }
+
         // Foi designado diretamente para este avaliador (ou é o avaliador da ressalva para retorno automático)
         const designadoDireto =
           (t.avaliadoresDesignados || []).some(
@@ -367,6 +387,23 @@ export default function TrabalhosPage() {
         rodadaCorrecao: novaRodada,
         dataUltimaCorrecao: new Date().toISOString(),
       });
+
+      // Notifica o mesmo avaliador por e-mail com o link de avaliação da nova versão corrigida
+      const emailDestino =
+        trabalhoParaCorrigir.avaliadorRessalvaEmail ||
+        trabalhoParaCorrigir.avaliadoresDesignados?.[0]?.email;
+      if (emailDestino) {
+        const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+        const linkAvaliacao = `${appBaseUrl}/avaliar/${trabalhoParaCorrigir.id}?email=${encodeURIComponent(emailDestino)}`;
+        enviarEmailNotificacaoAvaliador({
+          para: emailDestino,
+          nomeAvaliador: trabalhoParaCorrigir.avaliadorRessalvaNome,
+          eventoTitulo: trabalhoParaCorrigir.evento,
+          trabalhoTitulo: tituloCorrecao.trim() || trabalhoParaCorrigir.titulo,
+          areaTrabalho: trabalhoParaCorrigir.eixoTematico,
+          linkAvaliacao,
+        }).catch((err) => console.warn("[EmailJS Notificação Reenvio falhou]:", err));
+      }
 
       alert(
         `Resumo corrigido com sucesso! O trabalho foi reenviado automaticamente para ${avaliadorDestino}.`
@@ -909,6 +946,15 @@ export default function TrabalhosPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <Link
+                          href={`/avaliar/${trab.id}`}
+                          className="px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          title="Abrir página dedicada com a ficha de critérios e sliders"
+                        >
+                          <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span>Página de Avaliação (Ficha com Sliders)</span>
+                        </Link>
+
                         <button
                           type="button"
                           onClick={() => handleAbrirModalAvaliacao(trab, "pre_congresso")}
