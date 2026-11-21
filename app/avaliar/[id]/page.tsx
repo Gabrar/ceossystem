@@ -24,6 +24,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   EyeOff,
+  Lock,
+  LogIn,
 } from "lucide-react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -35,6 +37,36 @@ interface CriterioItem {
   nome: string;
   peso: number;
 }
+
+const DADOS_LOREM_DEMO: TrabalhoData = {
+  id: "lorem",
+  titulo: "Lorem Ipsum Dolor Sit Amet: Análise Empírica da Metodologia e Impacto Científico",
+  eventoTitulo: "Congresso Nacional de Saúde & Tecnologia 2026",
+  eventoId: "evento-demo",
+  eixoTematico: "Ciências da Saúde & Inovação Biomédica",
+  modalidade: "Apresentação Oral / Resumo Expandido",
+  tipoResumo: "expandido",
+  autores: "Dr. João Lorem, Profa. Dra. Maria Ipsum",
+  autorPrincipal: "Dr. João Lorem",
+  userEmail: "outro_autor_demo@exemplo.com",
+  coAutores: [{ nome: "Maria Ipsum", email: "maria@exemplo.com" }],
+  orientador: "Prof. Dr. Dolor Amet",
+  status: "submetido",
+  resumo: `INTRODUÇÃO:
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+OBJETIVOS:
+Investigar e quantificar os efeitos do modelo probabilístico sob condições estocásticas controladas, identificando correlações estatisticamente significativas entre variáveis latentes e métricas de desempenho longitudinal na triagem clínica.
+
+METODOLOGIA:
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Foram avaliados 1.250 registros anonimizados com validação cruzada k-fold (k = 10), garantindo intervalos de confiança de 95% via bootstrap paramétrico. Os testes estatísticos seguiram o limiar de significância de p < 0,01.
+
+RESULTADOS E DISCUSSÃO:
+Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. A taxa de convergência observada foi de 96,4%, com sensibilidade de 94,8% e especificidade de 97,1%, reduzindo o tempo de triagem diagnóstica em 42% frente aos métodos clássicos de benchmark.
+
+CONCLUSÃO:
+Integer in mauris eu nibh euismod gravida. Duis ac tellus et risus vulputate vehicula. Donec lobortis risus a elit. A integração de algoritmos preditivos ao fluxo assistencial demonstrou elevada consistência metodológica, reprodutibilidade científica e ausência de viés sistemático.`,
+};
 
 interface TrabalhoData {
   id: string;
@@ -55,6 +87,10 @@ interface TrabalhoData {
   arquivoUrl?: string;
   arquivoNome?: string;
   status: string;
+  avaliadorEmail?: string;
+  avaliadorNome?: string;
+  avaliadoresDesignadosEmails?: string[];
+  avaliadoresDesignadosNomes?: string[];
   avaliadoresDesignados?: Array<{ nome: string; email: string; area?: string }>;
   avaliacoesPreCongresso?: AvaliacaoPreCongresso[];
   notaPreCongresso?: number | null;
@@ -68,7 +104,7 @@ function ConteudoAvaliacaoTrabalho() {
   const trabalhoId = String(params?.id || "");
   const emailQuery = searchParams.get("email") || "";
 
-  const { user, userData } = useAuth();
+  const { user, userData, loading: authLoading, logout } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -106,6 +142,25 @@ function ConteudoAvaliacaoTrabalho() {
       try {
         setLoading(true);
         setErro(null);
+
+        // Caso de teste com Lorem Ipsum ou Demo
+        if (trabalhoId === "lorem" || trabalhoId === "demo" || trabalhoId === "teste") {
+          setTrabalho(DADOS_LOREM_DEMO);
+          const listaCritDemo: CriterioItem[] = [
+            { id: "c1", nome: "Relevância do Tema e Originalidade Científica", peso: 3.0 },
+            { id: "c2", nome: "Rigor Metodológico, Amostragem e Análise", peso: 3.0 },
+            { id: "c3", nome: "Clareza da Redação, Estrutura e Coesão", peso: 2.0 },
+            { id: "c4", nome: "Resultados, Discussão e Conclusões", peso: 2.0 },
+          ];
+          setCriterios(listaCritDemo);
+          const initialNotasDemo: Record<string, number> = {};
+          listaCritDemo.forEach((c) => {
+            initialNotasDemo[String(c.id)] = Number((c.peso * 0.85).toFixed(1));
+          });
+          setNotasCriterios(initialNotasDemo);
+          setLoading(false);
+          return;
+        }
 
         // 1. Carrega Trabalho
         const trabRef = doc(db, "trabalhos", trabalhoId);
@@ -218,6 +273,49 @@ function ConteudoAvaliacaoTrabalho() {
     };
     return isAvaliadorConflitoComTrabalho(avaliadorInfo, trabalho);
   }, [trabalho, emailAvaliadorInput, nomeAvaliadorInput, user, userData, emailQuery]);
+
+  // Validação Estrita de Vínculo: O usuário logado DEVE ser o avaliador designado para este trabalho
+  const ehAvaliadorDesignado = useMemo(() => {
+    if (!trabalho) return false;
+    // Permite modo de demonstração/lorem
+    if (trabalho.id === "lorem" || trabalho.id === "demo" || trabalho.id === "teste") {
+      return true;
+    }
+    if (!user?.email) return false;
+
+    const emailUser = user.email.toLowerCase().trim();
+
+    // 1. Verifica no campo avaliadorEmail direto
+    if (trabalho.avaliadorEmail && trabalho.avaliadorEmail.toLowerCase().trim() === emailUser) {
+      return true;
+    }
+
+    // 2. Verifica no array avaliadoresDesignadosEmails
+    if (
+      Array.isArray(trabalho.avaliadoresDesignadosEmails) &&
+      trabalho.avaliadoresDesignadosEmails.some((em) => (em || "").toLowerCase().trim() === emailUser)
+    ) {
+      return true;
+    }
+
+    // 3. Verifica no array avaliadoresDesignados
+    if (
+      Array.isArray(trabalho.avaliadoresDesignados) &&
+      trabalho.avaliadoresDesignados.some((av) => (av.email || "").toLowerCase().trim() === emailUser)
+    ) {
+      return true;
+    }
+
+    // 4. Se for o promotor/organizador do evento ou admin geral, permite supervisão
+    if (evento?.userId && evento.userId === user.uid) {
+      return true;
+    }
+    if (userData?.role === "admin") {
+      return true;
+    }
+
+    return false;
+  }, [trabalho, user, evento, userData]);
 
   // Verificação de Prazo de Avaliação (Início e Fim da Avaliação)
   const statusPrazoAvaliacao = useMemo(() => {
@@ -355,6 +453,13 @@ function ConteudoAvaliacaoTrabalho() {
         updatePayload.avaliadorRessalvaNome = nomeAvaliadorFinal;
       }
 
+      // Em modo de teste/lorem, simula a gravação com sucesso
+      if (trabalho.id === "lorem" || trabalho.id === "demo" || trabalho.id === "teste") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setSucesso(true);
+        return;
+      }
+
       const trabRef = doc(db, "trabalhos", trabalho.id);
       await updateDoc(trabRef, updatePayload);
 
@@ -367,7 +472,7 @@ function ConteudoAvaliacaoTrabalho() {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#071321] flex flex-col items-center justify-center p-6 text-center">
         <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
@@ -375,7 +480,7 @@ function ConteudoAvaliacaoTrabalho() {
           Carregando trabalho científico...
         </h2>
         <p className="text-xs text-slate-500 mt-1">
-          Buscando ficha de critérios e texto do resumo no banco de dados.
+          Buscando ficha de critérios e autenticação do parecerista.
         </p>
       </div>
     );
@@ -402,6 +507,48 @@ function ConteudoAvaliacaoTrabalho() {
     );
   }
 
+  // 1. O avaliador DEVE estar logado na sua conta vinculada (exceto em modo demo/lorem)
+  const isDemo = trabalho.id === "lorem" || trabalho.id === "demo" || trabalho.id === "teste";
+  if (!user && !isDemo) {
+    const urlRetorno = `/avaliar/${trabalho.id}${emailQuery ? `?email=${encodeURIComponent(emailQuery)}` : ""}`;
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#071321] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white dark:bg-[#0c1e33] border border-blue-200 dark:border-blue-900/50 rounded-3xl p-8 space-y-5 shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600 dark:text-blue-400">
+              Acesso Restrito ao Parecerista
+            </span>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+              Login Necessário
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+              Para garantir a segurança, integridade e o sigilo da avaliação às cegas, você deve estar conectado à sua conta de avaliador cadastrada na comissão científica.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2.5">
+            <Link
+              href={`/login?redirect=${encodeURIComponent(urlRetorno)}`}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Entrar com Minha Conta de Avaliador</span>
+            </Link>
+            <Link
+              href="/"
+              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            >
+              Voltar à página inicial
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Se o usuário for autor/coautor do trabalho, barra sumariamente
   if (temConflito) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#071321] flex flex-col items-center justify-center p-6 text-center">
@@ -429,6 +576,47 @@ function ConteudoAvaliacaoTrabalho() {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
             >
               <span>Ver Meus Trabalhos no Painel</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. O usuário logado NÃO é o avaliador designado para este trabalho
+  if (!ehAvaliadorDesignado) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#071321] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white dark:bg-[#0c1e33] border border-rose-300 dark:border-rose-900/50 rounded-3xl p-8 space-y-4 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider font-extrabold text-rose-600 dark:text-rose-400">
+              Acesso Não Autorizado
+            </span>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mt-1">
+              Trabalho Não Designado para esta Conta
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+              Você está conectado como <strong className="text-slate-900 dark:text-white">{user?.email}</strong>.
+            </p>
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+              Esta ficha de avaliação foi atribuída pela comissão científica exclusivamente ao parecerista designado. Por normas de conformidade acadêmica e integridade da banca examinadora, outras contas não possuem autorização para visualizar ou preencher este parecer.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2">
+            <button
+              onClick={() => logout()}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              <span>Desconectar / Entrar com Outra Conta</span>
+            </button>
+            <Link
+              href="/"
+              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors pt-1"
+            >
+              Voltar ao Início
             </Link>
           </div>
         </div>
@@ -535,10 +723,7 @@ function ConteudoAvaliacaoTrabalho() {
                   {trabalho.titulo}
                 </h2>
                 <div className="pt-1 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-                    <EyeOff className="w-3.5 h-3.5" />
-                    Avaliação às Cegas (Blind Peer Review)
-                  </span>
+                  
                   <span className="text-[11px] text-slate-400 dark:text-slate-500">
                     Autores e orientador ocultados para garantir a total imparcialidade
                   </span>

@@ -23,6 +23,7 @@ import {
   distribuirTrabalhosNosPeriodos,
   calcularNotaRanking,
   isTrabalhoAceito,
+  isAvaliadorConflitoComTrabalho,
 } from "@/lib/trabalhos";
 import { enviarEmailNotificacaoAvaliador } from "@/lib/mail";
 import {
@@ -172,6 +173,20 @@ function AnalyticsContent() {
             const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
             for (const s of selecionados) {
               if (s.email) {
+                // Salvaguarda: se por qualquer razão o avaliador tiver conflito de interesse com o trabalho, o e-mail NUNCA é enviado para ele
+                const conflitoInfo = {
+                  userId: rawT.userId || t.userId,
+                  userEmail: t.userEmail || rawT.userEmail || "",
+                  autorPrincipal: rawT.autorPrincipal || t.autores,
+                  autores: t.autores,
+                  coAutores: rawT.coAutores,
+                  orientador: rawT.orientador,
+                };
+                if (isAvaliadorConflitoComTrabalho(s, conflitoInfo)) {
+                  console.warn(`[Anti-Conflito] E-mail NÃO enviado: ${s.email} é autor/coautor/orientador do trabalho "${t.titulo}".`);
+                  continue;
+                }
+
                 const linkAvaliacao = `${appBaseUrl}/avaliar/${t.id}?email=${encodeURIComponent(s.email)}`;
                 enviarEmailNotificacaoAvaliador({
                   para: s.email,

@@ -105,13 +105,13 @@ export default function TesteEmailsPage() {
     setLog(null);
     try {
       const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-      const linkAvaliacao = `${appUrl}/avaliar/demo?email=${encodeURIComponent(emailDestino.trim())}`;
+      const linkAvaliacao = `${appUrl}/avaliar/lorem?email=${encodeURIComponent(emailDestino.trim())}`;
       const res = await enviarEmailNotificacaoAvaliador({
         para: emailDestino.trim(),
         nomeAvaliador: nomeDestino.trim() || "Gabriel",
         eventoTitulo: "Congresso Nacional de Saúde & Tecnologia 2026",
-        trabalhoTitulo: "Impacto da Inteligência Artificial no Diagnóstico Clínico Precoce",
-        areaTrabalho: "Ciências da Saúde",
+        trabalhoTitulo: "Lorem Ipsum Dolor Sit Amet: Análise Empírica da Metodologia e Impacto Científico",
+        areaTrabalho: "Ciências da Saúde & Inovação Biomédica",
         linkAvaliacao,
         prazoLimite: "28/11/2026",
       });
@@ -187,7 +187,7 @@ export default function TesteEmailsPage() {
           <button
             onClick={testarCodigoRegistro}
             disabled={loadingTipo !== null}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-900/40 to-blue-900/30 hover:from-indigo-900/60 hover:to-blue-900/50 border border-indigo-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group"
+            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-900/40 to-blue-900/30 hover:from-indigo-900/60 hover:to-blue-900/50 border border-indigo-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group cursor-pointer"
           >
             <span className="text-2xl mb-2">🔐</span>
             <span className="font-semibold text-white text-sm">Código OTP</span>
@@ -199,7 +199,7 @@ export default function TesteEmailsPage() {
           <button
             onClick={testarEmailInscricao}
             disabled={loadingTipo !== null}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-emerald-900/40 to-teal-900/30 hover:from-emerald-900/60 hover:to-teal-900/50 border border-emerald-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group"
+            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-emerald-900/40 to-teal-900/30 hover:from-emerald-900/60 hover:to-teal-900/50 border border-emerald-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group cursor-pointer"
           >
             <span className="text-2xl mb-2">🎟</span>
             <span className="font-semibold text-white text-sm">Inscrição</span>
@@ -211,7 +211,7 @@ export default function TesteEmailsPage() {
           <button
             onClick={testarEmailAvaliador}
             disabled={loadingTipo !== null}
-            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-violet-900/40 to-purple-900/30 hover:from-violet-900/60 hover:to-purple-900/50 border border-violet-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group"
+            className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-violet-900/40 to-purple-900/30 hover:from-violet-900/60 hover:to-purple-900/50 border border-violet-700/50 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-center group cursor-pointer"
           >
             <span className="text-2xl mb-2">⚖️</span>
             <span className="font-semibold text-white text-sm">Avaliador</span>
@@ -219,6 +219,26 @@ export default function TesteEmailsPage() {
               {loadingTipo === "avaliador" ? "Enviando..." : "Comissão Científica"}
             </span>
           </button>
+        </div>
+
+        {/* Link direto para abrir a página de avaliação em tela cheia com Lorem Ipsum */}
+        <div className="mt-5 p-4 rounded-xl bg-violet-950/30 border border-violet-800/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div>
+            <p className="text-xs font-bold text-violet-200">
+              Quer testar a página de avaliação agora no navegador?
+            </p>
+            <p className="text-[11px] text-violet-300/70 mt-0.5">
+              Visualize a ficha completa com resumo em Lorem Ipsum, critérios com barras deslizantes e avaliação às cegas.
+            </p>
+          </div>
+          <a
+            href={`/avaliar/lorem?email=${encodeURIComponent(emailDestino.trim())}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-lg transition-colors shadow-sm inline-block"
+          >
+            Abrir Página com Lorem &rarr;
+          </a>
         </div>
 
         {log && (
@@ -241,7 +261,7 @@ export default function TesteEmailsPage() {
 
         <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
           <p className="text-xs text-slate-500">
-            Ambos os disparos utilizam o mesmo template universal (`template_twoheg4`) adaptando seu layout via EmailJS.
+            Todos os 3 disparos utilizam o mesmo template universal (`template_twoheg4`) adaptando seu layout via EmailJS.
           </p>
         </div>
       </div>

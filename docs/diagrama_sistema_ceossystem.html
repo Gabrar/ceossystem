@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Céos System — Mapa Arquitetural & Inventário Completo do Sistema</title>
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card-bg: #111e38;
+      --card-border: #1e2e4f;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-amber: #f59e0b;
+      --accent-purple: #c084fc;
+      --accent-green: #4ade80;
+      --accent-rose: #fb7185;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 32px 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    
+    /* Top Header */
+    .top-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    }
+    .top-header h1 { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .top-header p { font-size: 13px; color: var(--accent-blue); margin-top: 4px; }
+    .tag-badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Section Header */
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e2e4f;
+    }
+    .section-title .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+    }
+
+    /* 4 Actors Grid */
+    .actors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .actor-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border-top: 4px solid;
+    }
+    .actor-card.amber { border-color: var(--accent-amber); }
+    .actor-card.blue { border-color: var(--accent-blue); }
+    .actor-card.purple { border-color: var(--accent-purple); }
+    .actor-card.green { border-color: var(--accent-green); }
+    .actor-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .actor-role { font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .actor-card.amber .actor-role { color: var(--accent-amber); }
+    .actor-card.blue .actor-role { color: var(--accent-blue); }
+    .actor-card.purple .actor-role { color: var(--accent-purple); }
+    .actor-card.green .actor-role { color: var(--accent-green); }
+    .actor-bullets { list-style: none; font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; }
+    .actor-bullets li { position: relative; padding-left: 14px; }
+    .actor-bullets li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    .actor-card.amber .actor-bullets li::before { color: var(--accent-amber); }
+    .actor-card.blue .actor-bullets li::before { color: var(--accent-blue); }
+    .actor-card.purple .actor-bullets li::before { color: var(--accent-purple); }
+    .actor-card.green .actor-bullets li::before { color: var(--accent-green); }
+
+    /* Engineering Principles Card */
+    .banner-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .banner-title { font-size: 14px; font-weight: 800; color: var(--accent-blue); margin-bottom: 12px; text-transform: uppercase; }
+    .pillar-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    .pillar-item { font-size: 12px; line-height: 1.5; color: #cbd5e1; }
+    .pillar-item strong { color: #fff; display: block; margin-bottom: 2px; }
+
+    /* Architecture Map Layers */
+    .arch-layer {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .arch-layer-header {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 14px;
+    }
+    .arch-layer.amber { border-color: rgba(245, 158, 11, 0.4); }
+    .arch-layer.amber .arch-layer-header { background: #78350f; color: #fde68a; }
+    .arch-layer.blue { border-color: rgba(56, 189, 248, 0.4); }
+    .arch-layer.blue .arch-layer-header { background: #0c4a6e; color: #bae6fd; }
+    .arch-layer.rose { border-color: rgba(251, 113, 133, 0.4); }
+    .arch-layer.rose .arch-layer-header { background: #881337; color: #fecdd3; }
+    .arch-layer.purple { border-color: rgba(192, 132, 252, 0.4); }
+    .arch-layer.purple .arch-layer-header { background: #581c87; color: #e9d5ff; }
+    .arch-layer.green { border-color: rgba(74, 222, 128, 0.4); }
+    .arch-layer.green .arch-layer-header { background: #14532d; color: #bbf7d0; }
+
+    .arch-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+    .sub-card {
+      background: #091024;
+      border: 1px solid #1a2a4d;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .sub-card-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .sub-card-path { font-family: monospace; font-size: 11px; color: var(--accent-blue); margin-bottom: 4px; word-break: break-all; }
+    .sub-card-desc { font-size: 11px; color: var(--text-muted); }
+
+    .connector-arrow {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--accent-blue);
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .connector-arrow span {
+      background: #091326;
+      border: 1px solid #1e3a8a;
+      padding: 4px 14px;
+      border-radius: 20px;
+      color: #93c5fd;
+    }
+
+    /* Tables */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    th {
+      background: #091326;
+      color: #93c5fd;
+      padding: 12px 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    td { padding: 12px 16px; border-bottom: 1px solid #162442; color: #cbd5e1; vertical-align: middle; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    tr:hover td { background: rgba(56, 189, 248, 0.04); }
+    .path-cell { font-family: monospace; color: #fff; font-weight: 600; font-size: 11.5px; }
+    .badge-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .badge-promotor { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge-participante { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .badge-avaliador { background: rgba(192, 132, 252, 0.15); color: #c084fc; }
+    .badge-admin { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
+    .badge-sistema { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+    .badge-publico { background: rgba(255, 255, 255, 0.1); color: #e2e8f0; }
+
+    /* Operational Cycles */
+    .cycle-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .cycle-title { font-size: 14px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .cycle-step {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #091024;
+      border: 1px solid #1a2a4d;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .step-action { font-weight: 700; color: #fff; width: 220px; flex-shrink: 0; }
+    .step-arrow-pill {
+      background: #111d38;
+      border: 1px solid #1e3a8a;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--accent-blue);
+      text-align: center;
+      width: 190px;
+      flex-shrink: 0;
+    }
+    .step-desc { color: var(--text-muted); flex: 1; text-align: right; }
+
+    /* Download banner */
+    .pdf-download-bar {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+    .pdf-download-bar a {
+      background: #fff;
+      color: #0369a1;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px 0 10px;
+      color: #64748b;
+      font-size: 11px;
+      border-top: 1px solid #1e2e4f;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Top Header -->
+    <div class="top-header">
+      <div>
+        <h1>CÉOS SYSTEM — ESPECIFICAÇÃO & ARQUITETURA TÉCNICA</h1>
+        <p>Next.js 15 App Router • Firebase Firestore • Asaas v3 Split • Supabase Storage • EmailJS</p>
+      </div>
+      <div class="tag-badge">Versão Oficial 2026</div>
+    </div>
+
+    <!-- PDF Link Bar -->
+    <div class="pdf-download-bar">
+      <div>
+        <strong>Documento em PDF disponível</strong> — Diagrama de alta fidelidade vetorial em 5 páginas diagramadas.
+      </div>
+      <a href="diagrama_sistema_ceossystem.pdf" target="_blank">Baixar PDF Oficial</a>
+    </div>
+
+    <!-- Section 1: Atores do Sistema -->
+    <div class="section-title"><div class="dot"></div>1. Governança de Papéis e Atores da Plataforma</div>
+    <div class="actors-grid">
+      <div class="actor-card amber">
+        <div class="actor-title">Promotor / Organizador</div>
+        <div class="actor-role">Painel Administrativo do Evento</div>
+        <ul class="actor-bullets">
+          <li>Criação e edição de congressos, datas e lotes de ingressos.</li>
+          <li>Gestão financeira com subcontas Asaas e saques PIX.</li>
+          <li>Distribuição de resumos à banca com filtro anti-conflito.</li>
+          <li>Credenciamento, emissão de certificados e métricas de vendas.</li>
+        </ul>
+      </div>
+
+      <div class="actor-card blue">
+        <div class="actor-title">Participante / Congressista</div>
+        <div class="actor-role">Experiência Pública & Inscrição</div>
+        <ul class="actor-bullets">
+          <li>Descoberta de eventos por cidade, categoria e modalidade.</li>
+          <li>Compra de ingressos via PIX com split financeiro automático.</li>
+          <li>Opção de voluntariar-se como avaliador no ato da inscrição.</li>
+          <li>Submissão de resumos, acompanhamento e auto check-in na portaria.</li>
+        </ul>
+      </div>
+
+      <div class="actor-card purple">
+        <div class="actor-title">Avaliador / Parecerista</div>
+        <div class="actor-role">Comissão Científica de Avaliação</div>
+        <ul class="actor-bullets">
+          <li>Acesso estrito e autenticado à ficha exclusiva de cada trabalho.</li>
+          <li>Avaliação às Cegas (Blind Peer Review) com autores 100% ocultos.</li>
+          <li>Sliders ponderados por critérios definidos e parecer técnico.</li>
+          <li>Lançamento de notas em tempo real e decisão colegiada da banca.</li>
+        </ul>
+      </div>
+
+      <div class="actor-card green">
+        <div class="actor-title">Super Administrador</div>
+        <div class="actor-role">Governança & Supervisão Geral</div>
+        <ul class="actor-bullets">
+          <li>Visão global de todos os eventos publicados na plataforma.</li>
+          <li>Monitoramento da taxa de 8% retida em cada transação financeira.</li>
+          <li>Moderação, aprovação e controle de organizadores e usuários.</li>
+          <li>Auditoria operacional de movimentações financeiras e saques PIX.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Engineering Principles -->
+    <div class="banner-card">
+      <div class="banner-title">Princípios Fundamentais de Engenharia & Segurança</div>
+      <div class="pillar-list">
+        <div class="pillar-item">
+          <strong>Blind Peer Review (Avaliação às Cegas):</strong>
+          O nome do autor, coautores e orientador são 100% ocultos na ficha de avaliação para garantir total imparcialidade na banca científica.
+        </div>
+        <div class="pillar-item">
+          <strong>Algoritmo Anti-Conflito de Interesses:</strong>
+          O autor, coautores e orientador são eliminados automaticamente da lista de avaliadores de seus próprios trabalhos durante a distribuição.
+        </div>
+        <div class="pillar-item">
+          <strong>Split Financeiro Automático (Asaas v3):</strong>
+          Cada inscrição divide automaticamente 8% de taxa de serviço retida para a Céos e 92% creditado líquido para a subconta bancária do promotor.
+        </div>
+        <div class="pillar-item">
+          <strong>Auto Check-in Seguro na Portaria:</strong>
+          O totem exibe QR Code oficial apontando para /checkin/[id], onde o congressista valida seu ingresso no próprio celular com privacidade absoluta.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Architecture Map -->
+    <div class="section-title"><div class="dot"></div>2. Mapa Arquitetural Vetorial (Camadas e Conexões)</div>
+    
+    <!-- Layer 1: Organizer -->
+    <div class="arch-layer amber">
+      <span class="arch-layer-header">Organizer Workspace (Painel do Promotor)</span>
+      <div class="arch-cards-grid">
+        <div class="sub-card">
+          <div class="sub-card-title">Organizer Finances</div>
+          <div class="sub-card-path">financeiro/page.tsx</div>
+          <div class="sub-card-desc">Saldo e saques PIX Asaas</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Event Management</div>
+          <div class="sub-card-path">meus-eventos/page.tsx</div>
+          <div class="sub-card-desc">Status e atalhos de gestão</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Organizer Dashboard</div>
+          <div class="sub-card-path">dashboard/page.tsx</div>
+          <div class="sub-card-desc">Métricas de GMV e inscritos</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Event Configuration</div>
+          <div class="sub-card-path">createEvent/page.tsx</div>
+          <div class="sub-card-desc">Lotes, cupons e critérios</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Work Review</div>
+          <div class="sub-card-path">trabalhos/page.tsx</div>
+          <div class="sub-card-desc">Notas e reenvios de resumo</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Organizer Analytics</div>
+          <div class="sub-card-path">analytics/page.tsx</div>
+          <div class="sub-card-desc">Distribuição de trabalhos</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-arrow">
+      <span>↓ publica eventos, define lotes e critérios avaliativos ↓</span>
+    </div>
+
+    <!-- Layer 2: Event Experience -->
+    <div class="arch-layer blue">
+      <span class="arch-layer-header">Event Experience (Jornada do Participante)</span>
+      <div class="arch-cards-grid">
+        <div class="sub-card">
+          <div class="sub-card-title">Event Discovery</div>
+          <div class="sub-card-path">eventos/page.tsx</div>
+          <div class="sub-card-desc">Feed público com busca</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Event Details</div>
+          <div class="sub-card-path">eventos/[id]/page.tsx</div>
+          <div class="sub-card-desc">Programação e lotes</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Registration Modal</div>
+          <div class="sub-card-path">ModalInscricaoEvento.tsx</div>
+          <div class="sub-card-desc">Checkout PIX e perfil</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Work Submission</div>
+          <div class="sub-card-path">ModalSubmissaoTrabalho.tsx</div>
+          <div class="sub-card-desc">Upload e coautoria</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Payment Verification</div>
+          <div class="sub-card-path">verificar-pagamento</div>
+          <div class="sub-card-desc">Verificação pós-PIX</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Reception & Check-in</div>
+          <div class="sub-card-path">checkin/[id]/page.tsx</div>
+          <div class="sub-card-desc">Auto check-in portaria</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-arrow">
+      <span>↓ processamento de pagamentos, guarda de PDFs e autenticação global ↓</span>
+    </div>
+
+    <!-- Layer 3: Shared Services -->
+    <div class="arch-layer rose">
+      <span class="arch-layer-header">Shared Services & Backend (Serviços e Regras de Negócio)</span>
+      <div class="arch-cards-grid">
+        <div class="sub-card">
+          <div class="sub-card-title">Firebase Firestore</div>
+          <div class="sub-card-path">lib/firebase.ts</div>
+          <div class="sub-card-desc">Coleções events e trabalhos</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Asaas Gateway Split</div>
+          <div class="sub-card-path">lib/asaas.ts & api/asaas/</div>
+          <div class="sub-card-desc">Subcontas e split de 8%</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">EmailJS Delivery</div>
+          <div class="sub-card-path">lib/mail.ts</div>
+          <div class="sub-card-desc">Template unificado adaptável</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Supabase Storage</div>
+          <div class="sub-card-path">lib/supabase.ts</div>
+          <div class="sub-card-desc">Guarda de arquivos e PDFs</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Scientific Rules</div>
+          <div class="sub-card-path">lib/trabalhos.ts</div>
+          <div class="sub-card-desc">Anti-conflito e blind review</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">Global Auth Context</div>
+          <div class="sub-card-path">contexts/AuthContext.tsx</div>
+          <div class="sub-card-desc">Sessão e papéis (roles)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side-by-Side Layers -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="arch-layer purple">
+        <span class="arch-layer-header">Evaluator Workspace (Comissão)</span>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="sub-card">
+            <div class="sub-card-title">Ficha às Cegas [avaliar/[id]/page.tsx]</div>
+            <div class="sub-card-desc">Sliders ponderados e parecer técnico</div>
+          </div>
+          <div class="sub-card">
+            <div class="sub-card-title">Área do Avaliador [painel/trabalhos/page.tsx]</div>
+            <div class="sub-card-desc">Fila de resumos alocados por área</div>
+          </div>
+          <div class="sub-card">
+            <div class="sub-card-title">Bloqueio Anti-Conflito [lib/trabalhos.ts]</div>
+            <div class="sub-card-desc">Barra autores e coautores de avaliar</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer green">
+        <span class="arch-layer-header">Administration (Super Admin)</span>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="sub-card">
+            <div class="sub-card-title">Admin Dashboard [admin/dashboard/page.tsx]</div>
+            <div class="sub-card-desc">GMV e receita de comissão 8%</div>
+          </div>
+          <div class="sub-card">
+            <div class="sub-card-title">Controle de Eventos [admin/eventos/page.tsx]</div>
+            <div class="sub-card-desc">Aprovação, moderação e controle</div>
+          </div>
+          <div class="sub-card">
+            <div class="sub-card-title">Gestão de Usuários [admin/usuarios/page.tsx]</div>
+            <div class="sub-card-desc">Permissões, bloqueios e perfis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Tables -->
+    <div class="section-title"><div class="dot"></div>3. Inventário Estrutural — Frontend & Páginas</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 28%;">Caminho do Arquivo</th>
+            <th style="width: 46%;">Responsabilidade / Regra de Negócio</th>
+            <th style="width: 12%; text-align: center;">Ator</th>
+            <th style="width: 14%; text-align: center;">Serviço</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="path-cell">app/page.tsx</td>
+            <td>Landing page oficial da plataforma com busca rápida e vitrine de eventos em destaque.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-publico">Público</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firebase</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/eventos/page.tsx</td>
+            <td>Feed com busca e filtros por modalidade, categoria e cidade.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Participante</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/eventos/[id]/page.tsx</td>
+            <td>Página oficial do evento: programação, palestrantes, lotes e submissão.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Participante</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Firestore/Asaas</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/eventos/createEvent/page.tsx</td>
+            <td>Wizard central de criação de eventos, lotes, trabalhos e critérios.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-promotor">Promotor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Firestore/Asaas</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/avaliar/[id]/page.tsx</td>
+            <td>Ficha às cegas: login estrito, sliders ponderados e parecer técnico.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Avaliador</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Firestore/EmailJS</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/checkin/[id]/page.tsx</td>
+            <td>Auto-atendimento mobile na portaria: valida código ou CPF sem expor lista.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Participante</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/credenciamento/[id]/page.tsx</td>
+            <td>Painel da portaria: scanner de QR Code e contagem ao vivo de presentes.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-promotor">Staff/Promotor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/usuario/painel/dashboard/page.tsx</td>
+            <td>Dashboard analítico com receita total, ingressos e gráficos de vendas.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-promotor">Promotor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/usuario/painel/financeiro/page.tsx</td>
+            <td>Extrato financeiro, saldo liberado no Asaas e solicitação de saque PIX.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-promotor">Promotor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Asaas API</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/usuario/painel/trabalhos/page.tsx</td>
+            <td>Submissões do autor e aba 'Área do Avaliador' com fila de resumos.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Autor/Avaliador</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Firestore/EmailJS</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/usuario/painel/analytics/page.tsx</td>
+            <td>Distribuição automática de resumos aos avaliadores por área sem conflito.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-promotor">Promotor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Firestore/EmailJS</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">components/ModalInscricaoEvento.tsx</td>
+            <td>Modal de inscrição: seleção de lote, opção de ser avaliador e checkout PIX.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Participante</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Asaas / Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">components/ModalSubmissaoTrabalho.tsx</td>
+            <td>Modal de submissão: autoria, coautores, orientador e anexo Supabase.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Autor</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-admin">Supabase / Fire</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">contexts/AuthContext.tsx</td>
+            <td>Provedor global de estado de sessão, perfil e persistência do usuário.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-publico">Todos</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firebase Auth</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 4: Backend Table -->
+    <div class="section-title"><div class="dot"></div>4. Inventário Estrutural — Backend & Libs Centrais</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 28%;">Caminho / Endpoint</th>
+            <th style="width: 46%;">Responsabilidade / Regra de Negócio</th>
+            <th style="width: 12%; text-align: center;">Escopo</th>
+            <th style="width: 14%; text-align: center;">Integração</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="path-cell">lib/trabalhos.ts</td>
+            <td>Coração científico: algoritmo anti-conflito, distribuição e notas.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Sistema</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Core Rules</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">lib/mail.ts</td>
+            <td>Disparador EmailJS com template universal adaptável (botões e códigos).</td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Sistema</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">EmailJS REST</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">lib/asaas.ts</td>
+            <td>Cliente Asaas: subcontas bancárias, split de 8% e cobranças PIX/Cartão.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Sistema</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Asaas v3</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/api/asaas/criar-cobranca/route.ts</td>
+            <td>Endpoint que cria cobrança no Asaas retendo 8% para a carteira Céos.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Backend</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Asaas v3</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/api/asaas/webhook/route.ts</td>
+            <td>Webhook Asaas que recebe avisos de PIX pago e ativa a inscrição.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-avaliador">Backend</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-participante">Asaas Webhook</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">app/admin/dashboard/page.tsx</td>
+            <td>Cockpit do Super Admin: total de eventos, faturamento e comissões.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-admin">Super Admin</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firestore</span></td>
+          </tr>
+          <tr>
+            <td class="path-cell">contexts/AdminAuthContext.tsx</td>
+            <td>Contexto de autenticação isolado exclusivo para administradores.</td>
+            <td style="text-align: center;"><span class="badge-pill badge-admin">Super Admin</span></td>
+            <td style="text-align: center;"><span class="badge-pill badge-sistema">Firebase Auth</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 5: Operational Cycles -->
+    <div class="section-title"><div class="dot"></div>5. Ciclos Operacionais com Setas (Passo a Passo)</div>
+    
+    <!-- Cycle 1 -->
+    <div class="cycle-card">
+      <div class="cycle-title" style="color: var(--accent-blue);">
+        Ciclo 1: Inscrição, Checkout Asaas com Split (8%) e Emissão de Ingresso
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-blue);">1</div>
+        <div class="step-action">Participante clica 'Inscrever'</div>
+        <div class="step-arrow-pill">──▶ Abre Modal ──▶</div>
+        <div class="step-desc">components/ModalInscricaoEvento.tsx</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-blue);">2</div>
+        <div class="step-action">Seleciona lote e opta avaliar</div>
+        <div class="step-arrow-pill">──▶ POST /criar-cobranca ──▶</div>
+        <div class="step-desc">lib/asaas.ts (Split 8% Céos / 92% Promotor)</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-blue);">3</div>
+        <div class="step-action">Gera cobrança PIX no Asaas</div>
+        <div class="step-arrow-pill">──▶ Grava no Firestore ──▶</div>
+        <div class="step-desc">Documento 'pendente' na coleção inscricoes</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-blue);">4</div>
+        <div class="step-action">Participante paga o PIX</div>
+        <div class="step-arrow-pill">──▶ Webhook confirma ──▶</div>
+        <div class="step-desc">app/api/asaas/webhook/route.ts muda status</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-blue);">5</div>
+        <div class="step-action">Inscrição confirmada</div>
+        <div class="step-arrow-pill">──▶ EmailJS Universal ──▶</div>
+        <div class="step-desc">lib/mail.ts dispara e-mail com Credencial e QR Code</div>
+      </div>
+    </div>
+
+    <!-- Cycle 2 -->
+    <div class="cycle-card">
+      <div class="cycle-title" style="color: var(--accent-purple);">
+        Ciclo 2: Submissão Científica, Distribuição Inteligente e Avaliação às Cegas
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-purple);">1</div>
+        <div class="step-action">Autor abre modal de submissão</div>
+        <div class="step-arrow-pill" style="border-color: #6b21a8; color: var(--accent-purple);">──▶ Upload do PDF ──▶</div>
+        <div class="step-desc">Armazenado no bucket do Supabase Storage</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-purple);">2</div>
+        <div class="step-action">Trabalho salvo no banco</div>
+        <div class="step-arrow-pill" style="border-color: #6b21a8; color: var(--accent-purple);">──▶ Distribuir Resumos ──▶</div>
+        <div class="step-desc">app/usuario/painel/analytics/page.tsx</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-purple);">3</div>
+        <div class="step-action">Algoritmo escolhe a banca</div>
+        <div class="step-arrow-pill" style="border-color: #6b21a8; color: var(--accent-purple);">──▶ Filtro Anti-Conflito ──▶</div>
+        <div class="step-desc">Elimina sumariamente autor, coautores e orientador</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-purple);">4</div>
+        <div class="step-action">Vincula avaliador por área</div>
+        <div class="step-arrow-pill" style="border-color: #6b21a8; color: var(--accent-purple);">──▶ EmailJS Notificação ──▶</div>
+        <div class="step-desc">Dispara e-mail com link exclusivo para /avaliar/[id]</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-purple);">5</div>
+        <div class="step-action">Avaliador loga na sua conta</div>
+        <div class="step-arrow-pill" style="border-color: #6b21a8; color: var(--accent-purple);">──▶ Avaliação às Cegas ──▶</div>
+        <div class="step-desc">Arrasta sliders ponderados e assina parecer técnico</div>
+      </div>
+    </div>
+
+    <!-- Cycle 3 -->
+    <div class="cycle-card">
+      <div class="cycle-title" style="color: var(--accent-green);">
+        Ciclo 3: Dia do Evento, Portaria, Totem QR Code e Auto Check-in Seguro
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-green);">1</div>
+        <div class="step-action">Staff abre credenciamento</div>
+        <div class="step-arrow-pill" style="border-color: #166534; color: var(--accent-green);">──▶ Projeta ou imprime ──▶</div>
+        <div class="step-desc">Exibe QR Code oficial apontando para /checkin/[id]</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-green);">2</div>
+        <div class="step-action">Participante aponta câmera</div>
+        <div class="step-arrow-pill" style="border-color: #166534; color: var(--accent-green);">──▶ Tela mobile isolada ──▶</div>
+        <div class="step-desc">app/checkin/[id]/page.tsx (Sem dados de terceiros)</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-green);">3</div>
+        <div class="step-action">Digita Código do Ingresso</div>
+        <div class="step-arrow-pill" style="border-color: #166534; color: var(--accent-green);">──▶ Consulta no Firestore ──▶</div>
+        <div class="step-desc">Valida inscrição e barra tentativas de duplicidade</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-green);">4</div>
+        <div class="step-action">Check-in confirmado</div>
+        <div class="step-arrow-pill" style="border-color: #166534; color: var(--accent-green);">──▶ Feedback visual ──▶</div>
+        <div class="step-desc">Emite som de sucesso e exibe crachá digital</div>
+      </div>
+      <div class="cycle-step">
+        <div class="step-num" style="background: var(--accent-green);">5</div>
+        <div class="step-action">Firestore atualiza status</div>
+        <div class="step-arrow-pill" style="border-color: #166534; color: var(--accent-green);">──▶ Painel da recepção ──▶</div>
+        <div class="step-desc">Recepção computa presença do congressista na hora</div>
+      </div>
+    </div>
+
+    <footer>
+      Céos System • Documento Oficial de Especificação e Arquitetura de Software • Next.js 15 • Firebase • Asaas • Supabase • EmailJS
+    </footer>
+  </div>
+</body>
+</html>
